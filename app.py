@@ -18,6 +18,7 @@ from pipeline.normalizer import LaptopListingNormalizer
 from pipeline.scam_detector import LaptopScamDetector
 from data.master_catalog_seed import seed_master_catalog
 from scrapers.generate_synthetic_data import generate_realistic_market_dataset
+from data.image_catalog import get_product_image_url
 
 # ==============================================================================
 # PAGE CONFIGURATION
@@ -328,6 +329,60 @@ st.markdown("""
         background: #10b981;
         border-radius: 50%;
     }
+
+    /* Product Images & Cards */
+    .laptop-img-hero {
+        width: 100%;
+        height: 190px;
+        object-fit: cover;
+        border-radius: 10px;
+        display: block;
+        border: 1px solid #334155;
+        background: #0f172a;
+    }
+    .laptop-card-box {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .laptop-card-box:hover {
+        transform: translateY(-2px);
+        border-color: #3b82f6;
+    }
+    .laptop-card-img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        display: block;
+        border-bottom: 1px solid #334155;
+    }
+    .laptop-card-content {
+        padding: 12px 14px;
+    }
+    .laptop-card-title {
+        font-weight: 700;
+        color: #f8fafc;
+        font-size: 0.90rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .laptop-card-meta {
+        font-size: 0.76rem;
+        color: #94a3b8;
+        margin-top: 3px;
+        margin-bottom: 8px;
+    }
+    .laptop-card-price {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #38bdf8;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -544,6 +599,41 @@ if menu == "Market Overview & Dashboard":
                     )
                     apply_dark_plotly_layout(fig_depr, height=400)
                     st.plotly_chart(fig_depr, use_container_width=True)
+
+            st.markdown("### 🏆 Lini Produk Unggulan Pasar Laptop (Featured Flagships)")
+            st.markdown("Ringkasan visual laptop terpopuler di pasar sekunder Indonesia dengan performa tinggi dan retensi nilai terbaik:")
+            feat_cols = st.columns(4)
+            featured_showcase = [
+                ("Apple", "MacBook Pro 14 M3 Pro", "MacBook Pro", 2023, "Apple M3 Pro (11-Core)", "Apple M3 Pro 14-Core GPU", 28999000),
+                ("Lenovo", "ThinkPad X1 Carbon Gen 11", "ThinkPad X1 Carbon", 2023, "Intel Core i7-1365U", "Intel Iris Xe Graphics", 29500000),
+                ("ASUS", "ROG Zephyrus G14 GA402", "ROG Zephyrus G14", 2023, "AMD Ryzen 9 7940HS", "NVIDIA GeForce RTX 4060 (125W)", 27999000),
+                ("Dell", "Dell XPS 15 9530", "Dell XPS 15", 2023, "Intel Core i7-13700H", "NVIDIA GeForce RTX 4050 (50W)", 31500000)
+            ]
+            for idx, (b_name, m_name, s_name, y_rel, cpu, gpu, msrp_new) in enumerate(featured_showcase):
+                f_img = get_product_image_url(b_name, s_name, m_name)
+                with feat_cols[idx]:
+                    st.markdown(f"""
+                    <div class="laptop-card-box">
+                        <div style="position:relative;">
+                            <img class="laptop-card-img" src="{f_img}" alt="{m_name}" />
+                            <div style="position:absolute; top:8px; right:8px; background:rgba(15,23,42,0.85); color:#38bdf8; font-size:0.70rem; font-weight:700; padding:2px 7px; border-radius:6px; border:1px solid #334155;">
+                                {y_rel}
+                            </div>
+                        </div>
+                        <div class="laptop-card-content">
+                            <div class="laptop-card-title">{b_name} {m_name}</div>
+                            <div class="laptop-card-meta">{s_name}</div>
+                            <div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:8px;">
+                                ⚙️ {cpu}<br>
+                                🎮 {gpu}
+                            </div>
+                            <div style="border-top:1px solid #334155; padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:0.72rem; color:#94a3b8;">MSRP Baru</span>
+                                <span class="laptop-card-price">Rp {msrp_new:,.0f}</span>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
     except Exception as e:
         st.error(f"Terjadi kesalahan pada modul Dashboard: {e}")
 
@@ -600,8 +690,16 @@ elif menu == "FMV & Hedonic Calculator":
                 with col_specs:
                     gpu_str = f"{model_obj.gpu_model} ({model_obj.vram_gb}GB, {model_obj.tgp_watt}W)" if model_obj.vram_gb > 0 else (model_obj.gpu_model or "Integrated iGPU")
                     ram_up_str = "Dual SODIMM (Upgradeable)" if model_obj.is_ram_upgradeable else "Soldered Onboard (Non-Upgradeable)"
+                    img_url = model_obj.image_url or get_product_image_url(selected_brand, model_obj.series, model_obj.name)
 
                     st.markdown(f"""
+                    <div style="border-radius:12px; overflow:hidden; border:1px solid #334155; margin-bottom:14px; background:#0f172a; box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+                        <img src="{img_url}" alt="{selected_brand} {model_obj.name}" style="width:100%; height:195px; object-fit:cover; display:block;" />
+                        <div style="padding:8px 12px; background:rgba(30,41,59,0.9); font-size:0.78rem; color:#94a3b8; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+                            <span>💻 {selected_brand} {model_obj.series or ''}</span>
+                            <span style="color:#60a5fa; background:rgba(59,130,246,0.15); padding:2px 8px; border-radius:12px; border:1px solid rgba(59,130,246,0.3);">Rilis {model_obj.release_year}</span>
+                        </div>
+                    </div>
                     <div class="spec-card-container">
                         <div class="spec-card-header">Spesifikasi Bawaan Pabrik</div>
                         <div class="spec-item">
@@ -901,6 +999,39 @@ elif menu == "Arbitrage & Hot Deals Radar":
                 </div>
                 """, unsafe_allow_html=True)
 
+                # Top 3 Visual Deal Cards
+                st.markdown("#### 🔥 Rekomendasi Hot Deals Pilihan")
+                c_deal_cards = st.columns(min(3, len(deals)))
+                for idx, col in enumerate(c_deal_cards):
+                    deal = deals[idx]
+                    d_img = get_product_image_url(deal.get("brand", ""), model_name=deal.get("model", ""))
+                    tier_badge_color = "#10b981" if "Tier 1" in deal.get("deal_tier", "") else "#3b82f6"
+                    with col:
+                        st.markdown(f"""
+                        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; overflow:hidden; margin-bottom:18px; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                            <div style="position:relative;">
+                                <img src="{d_img}" alt="{deal['model']}" style="width:100%; height:140px; object-fit:cover; display:block;" />
+                                <div style="position:absolute; top:8px; right:8px; background:{tier_badge_color}; color:#fff; font-size:0.72rem; font-weight:800; padding:3px 8px; border-radius:8px;">
+                                    Hemat {deal['discount_pct']:.1f}%
+                                </div>
+                            </div>
+                            <div style="padding:12px 14px;">
+                                <div style="font-weight:700; color:#f8fafc; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{deal['brand']} {deal['model']}</div>
+                                <div style="font-size:0.75rem; color:#94a3b8; margin:2px 0 8px 0;">{deal['city']} • {deal['platform'].upper()}</div>
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid rgba(51,65,85,0.4); padding-top:8px;">
+                                    <div>
+                                        <div style="font-size:0.68rem; color:#94a3b8;">Harga Beli</div>
+                                        <div style="font-family:'JetBrains Mono',monospace; font-size:0.95rem; font-weight:800; color:#38bdf8;">Rp {deal['price']:,.0f}</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.68rem; color:#34d399;">Estimasi Margin</div>
+                                        <div style="font-family:'JetBrains Mono',monospace; font-size:0.95rem; font-weight:800; color:#34d399;">+Rp {deal['potential_profit']:,.0f}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
                 df_deals = pd.DataFrame(deals)
                 
                 display_df = df_deals[[
@@ -965,6 +1096,36 @@ elif menu == "Spec Matrix & Model Comparison":
                 m2 = db.query(MasterModel).filter(MasterModel.id == id2).first()
 
                 if m1 and m2:
+                    col_p1, col_p2 = st.columns(2)
+                    with col_p1:
+                        img1 = m1.image_url or get_product_image_url(m1.brand.name if m1.brand else "", m1.series, m1.name)
+                        st.markdown(f"""
+                        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; overflow:hidden; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                            <img src="{img1}" alt="{dev1_key}" style="width:100%; height:190px; object-fit:cover; display:block;" />
+                            <div style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">{m1.brand.name if m1.brand else ''} {m1.name}</div>
+                                    <div style="font-size:0.75rem; color:#94a3b8;">{m1.series or '-'}</div>
+                                </div>
+                                <span style="color:#38bdf8; font-family:'JetBrains Mono',monospace; font-size:0.8rem; background:rgba(56,189,248,0.12); padding:3px 10px; border-radius:8px; border:1px solid rgba(56,189,248,0.3); font-weight:700;">{m1.release_year}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with col_p2:
+                        img2 = m2.image_url or get_product_image_url(m2.brand.name if m2.brand else "", m2.series, m2.name)
+                        st.markdown(f"""
+                        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; overflow:hidden; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                            <img src="{img2}" alt="{dev2_key}" style="width:100%; height:190px; object-fit:cover; display:block;" />
+                            <div style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">{m2.brand.name if m2.brand else ''} {m2.name}</div>
+                                    <div style="font-size:0.75rem; color:#94a3b8;">{m2.series or '-'}</div>
+                                </div>
+                                <span style="color:#a855f7; font-family:'JetBrains Mono',monospace; font-size:0.8rem; background:rgba(168,85,247,0.12); padding:3px 10px; border-radius:8px; border:1px solid rgba(168,85,247,0.3); font-weight:700;">{m2.release_year}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
                     spec_data = {
                         "Parameter Spesifikasi Hardware": [
                             "Tahun Peluncuran", "Prosesor / CPU", "Arsitektur CPU & Cores", "Cinebench R23 Multi-Core",
@@ -1126,8 +1287,47 @@ elif menu == "Master Catalog Data":
             </div>
             """, unsafe_allow_html=True)
 
-            # 4. Format Data Table
+            # 4. Format Data Table & Visual Gallery
             if records:
+                view_mode = st.radio("Format Tampilan Katalog:", ["Tabel Data Lengkap", "Galeri Kartu Produk Visual"], horizontal=True)
+
+                if view_mode == "Galeri Kartu Produk Visual":
+                    st.markdown("#### 📸 Galeri Visual Produk Laptop")
+                    sample_records = records[:24]  # showcase top 24 filtered products
+                    cols_per_row = 4
+                    for row_idx in range(0, len(sample_records), cols_per_row):
+                        row_items = sample_records[row_idx:row_idx+cols_per_row]
+                        cols = st.columns(cols_per_row)
+                        for col_idx, item in enumerate(row_items):
+                            m, b_name, msrp, ram, rom = item
+                            img_url = m.image_url or get_product_image_url(b_name, m.series, m.name)
+                            msrp_val = float(msrp) if msrp else 0
+                            with cols[col_idx]:
+                                st.markdown(f"""
+                                <div class="laptop-card-box">
+                                    <div style="position:relative;">
+                                        <img class="laptop-card-img" src="{img_url}" alt="{m.name}" />
+                                        <div style="position:absolute; top:8px; right:8px; background:rgba(15,23,42,0.85); color:#60a5fa; font-size:0.70rem; font-weight:700; padding:2px 7px; border-radius:6px; border:1px solid #334155;">
+                                            {m.release_year}
+                                        </div>
+                                    </div>
+                                    <div class="laptop-card-content">
+                                        <div class="laptop-card-title">{b_name} {m.name}</div>
+                                        <div class="laptop-card-meta">{m.series or '-'}</div>
+                                        <div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:6px;">
+                                            ⚙️ {m.processor_model or '-'}<br>
+                                            🎮 {m.gpu_model or 'iGPU'}
+                                        </div>
+                                        <div style="border-top:1px solid #334155; padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-size:0.72rem; color:#94a3b8;">{ram or '-'}GB / {rom or '-'}GB</span>
+                                            <span class="laptop-card-price">{'Rp ' + f'{msrp_val:,.0f}' if msrp_val > 0 else '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    if len(records) > 24:
+                        st.caption(f"Menampilkan 24 dari {len(records)} produk terfilter. Pilih 'Tabel Data Lengkap' untuk melihat dan mengunduh seluruh baris.")
+
                 table_data = []
                 for m, b_name, msrp, ram, rom in records:
                     gpu_str = f"{m.gpu_model} ({m.vram_gb}GB, {m.tgp_watt}W)" if m.vram_gb > 0 else (m.gpu_model or "iGPU")
@@ -1153,7 +1353,8 @@ elif menu == "Master Catalog Data":
                     })
 
                 df_catalog = pd.DataFrame(table_data)
-                st.dataframe(df_catalog, use_container_width=True, hide_index=True)
+                if view_mode == "Tabel Data Lengkap":
+                    st.dataframe(df_catalog, use_container_width=True, hide_index=True)
 
                 # Export CSV
                 csv_data = df_catalog.to_csv(index=False).encode('utf-8')
@@ -1171,7 +1372,18 @@ elif menu == "Master Catalog Data":
                     
                     insp_m = next((m for m, _, _, _, _ in records if m.name == inspected_model_name), None)
                     if insp_m:
-                        c_insp1, c_insp2 = st.columns(2)
+                        insp_img = insp_m.image_url or get_product_image_url(selected_cat_brand, insp_m.series, insp_m.name)
+                        c_insp_img, c_insp1, c_insp2 = st.columns([1, 1.2, 1.2])
+                        with c_insp_img:
+                            st.markdown(f"""
+                            <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; overflow:hidden; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.25);">
+                                <img src="{insp_img}" alt="{insp_m.name}" style="width:100%; height:185px; object-fit:cover; display:block;" />
+                                <div style="padding:10px 12px; background:#1e293b; border-top:1px solid #334155;">
+                                    <div style="font-weight:800; color:#f8fafc; font-size:0.95rem;">{insp_m.name}</div>
+                                    <div style="color:#60a5fa; font-size:0.78rem; margin-top:2px;">{insp_m.series or '-'} ({insp_m.release_year})</div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         with c_insp1:
                             st.markdown(f"""
                             **Informasi Arsitektur & Performa:**

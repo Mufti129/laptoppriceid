@@ -21,14 +21,15 @@ Platform riset ekonometrik, intelligence pasar sekunder, dan kalkulator valuasi 
 
 4. **Executive Streamlit Web Dashboard:**
    - Tampilan responsif dengan tema *Executive Dark Slate* yang nyaman dipandang.
+   - Visualisasi gambar produk laptop beresolusi tinggi pada seluruh lini brand & model.
    - 7 Modul Analisis Lengkap:
-     - *Market Overview & Dashboard*
-     - *FMV & Hedonic Calculator*
-     - *3-Tier Price Corridors & Quantiles*
-     - *Arbitrage & Hot Deals Radar*
-     - *Spec Matrix & Model Comparison*
-     - *Master Catalog Data* (Eksplorasi 1.000 Model Hardware & Export CSV)
-     - *Data Explorer & Scam Filter*
+     - *Market Overview & Dashboard* (Statistik pasar makro & showcase featured flagships)
+     - *FMV & Hedonic Calculator* (Kalkulator valuasi presisi tinggi + foto produk & spek pabrik)
+     - *3-Tier Price Corridors & Quantiles* (P25 bargain, median FMV, dan P75 pristine)
+     - *Arbitrage & Hot Deals Radar* (Radar peluang beli murah + kartu deal visual interaktif)
+     - *Spec Matrix & Model Comparison* (Komparasi berdampingan head-to-head lengkap dengan foto unit)
+     - *Master Catalog Data* (Eksplorasi 1.000 Model Hardware, Galeri Visual Kartu, & Export CSV)
+     - *Data Explorer & Scam Filter* (Audit listing pasar & filter perangkap DP)
 
 ---
 

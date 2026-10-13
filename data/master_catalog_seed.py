@@ -12,6 +12,7 @@ from data.catalog_acer import BRAND_DATA as ACER_DATA
 from data.catalog_hp import BRAND_DATA as HP_DATA
 from data.catalog_dell import BRAND_DATA as DELL_DATA
 from data.catalog_others import OTHERS_BRAND_DATA
+from data.image_catalog import get_product_image_url
 
 ALL_BRAND_CATALOGS = [
     APPLE_DATA,
@@ -82,11 +83,15 @@ def seed_master_catalog():
                         charger_watt=model_info.get("charger_watt", 65),
                         weight_kg=model_info.get("weight_kg"),
                         chassis_material=model_info.get("chassis_material"),
-                        os_at_launch=model_info.get("os_at_launch")
+                        os_at_launch=model_info.get("os_at_launch"),
+                        image_url=get_product_image_url(brand_name, model_info.get("series"), model_info["name"])
                     )
                     db.add(model)
                     db.flush()
                     model_count += 1
+                else:
+                    if not model.image_url:
+                        model.image_url = get_product_image_url(brand_name, model_info.get("series"), model_info["name"])
 
                 for v_info in model_info.get("variants", []):
                     variant = db.query(MasterVariant).filter(
@@ -101,10 +106,14 @@ def seed_master_catalog():
                             ram_gb=v_info["ram_gb"],
                             storage_gb=v_info["storage_gb"],
                             official_msrp_new=v_info["official_msrp_new"],
-                            aliases=v_info.get("aliases")
+                            aliases=v_info.get("aliases"),
+                            image_url=model.image_url
                         )
                         db.add(variant)
                         variant_count += 1
+                    else:
+                        if not variant.image_url:
+                            variant.image_url = model.image_url
 
         db.commit()
         print(f"[SUCCESS] Seeding Master Selesai: {brand_count} Brand Baru, Total Model Baru: {model_count}, Total Varian Baru: {variant_count}")
