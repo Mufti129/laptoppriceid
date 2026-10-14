@@ -108,14 +108,37 @@ class LaptopEntityMatcher:
         best_name = None
         best_msrp = None
 
+        # Deteksi brand eksplisit dari judul
+        detected_brand = None
+        brand_identifiers = {
+            "Apple": ["apple", "macbook", "mac book"],
+            "Lenovo": ["lenovo", "thinkpad", "ideapad", "legion", "loq"],
+            "ASUS": ["asus", "zenbook", "vivobook", "zephyrus"],
+            "Acer": ["acer", "predator", "swift", "aspire"],
+            "HP": ["hp ", " victus", " omen", " pavilion", " elitebook", " probook", " envy"],
+            "Dell": ["dell", "alienware", "latitude", "inspiron", "precision"],
+            "MSI": ["msi", "katana", "stealth", "cyborg", "raider"],
+            "Axioo": ["axioo", "pongo", "mybook", "hype"],
+            "Huawei": ["huawei", "matebook"],
+            "Microsoft": ["microsoft", "surface"]
+        }
+        for b_name, b_kws in brand_identifiers.items():
+            if any(k in f" {clean_title} " for k in b_kws):
+                detected_brand = b_name.lower()
+                break
+
         for item in self._variants_cache:
-            # 1. Cek kecocokan RAM & Storage jika diekstrak
+            # 1. Cek kesesuaian brand jika brand terdeteksi di judul
+            if detected_brand and item["brand_name"].lower() != detected_brand:
+                continue
+
+            # 2. Cek kecocokan RAM & Storage jika diekstrak
             if ram_gb and item["ram_gb"] != ram_gb:
                 continue
             if storage_gb and item["storage_gb"] != storage_gb:
                 continue
 
-            # 2. Cek apakah ada keyword model / brand / alias
+            # 3. Cek apakah ada keyword model / brand / alias
             brand_kw = item["brand_name"].lower()
             model_kw = item["model_name"].lower()
             model_core_tokens = [w for w in model_kw.split() if len(w) >= 3 and not w.isdigit()]
@@ -127,6 +150,37 @@ class LaptopEntityMatcher:
                 any(alias in clean_title for alias in item["aliases_list"])
             )
             if not has_relevant_kw:
+                continue
+
+            # Series mismatch guard
+            # Jika judul menyebut kata kunci seri spesifik (misal 'thinkpad'), tolak model non-thinkpad dari brand yang sama
+            series_pairs = [
+                ("thinkpad", ["legion", "loq", "ideapad", "yoga"]),
+                ("legion", ["thinkpad", "ideapad", "yoga"]),
+                ("loq", ["thinkpad", "ideapad", "yoga"]),
+                ("macbook pro", ["macbook air"]),
+                ("macbook air", ["macbook pro"]),
+                ("rog", ["vivobook", "expertbook"]),
+                ("tuf", ["zenbook", "vivobook"]),
+                ("zenbook", ["tuf", "rog"]),
+                ("nitro", ["swift", "aspire"]),
+                ("predator", ["aspire", "swift"]),
+                ("victus", ["elitebook", "probook"]),
+                ("omen", ["pavilion", "probook", "elitebook"]),
+                ("latitude", ["alienware", "xps"]),
+                ("xps", ["latitude", "inspiron"]),
+                ("alienware", ["latitude", "inspiron"])
+            ]
+            mismatch = False
+            for target_kw, rival_kws in series_pairs:
+                if target_kw in clean_title:
+                    for rival in rival_kws:
+                        if rival in model_kw:
+                            mismatch = True
+                            break
+                if mismatch:
+                    break
+            if mismatch:
                 continue
 
             # 3. Hitung score fuzzy matching

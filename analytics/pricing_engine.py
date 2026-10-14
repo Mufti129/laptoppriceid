@@ -92,6 +92,39 @@ class LaptopPricingEngine:
         self._cached_stats_map = stats_map
         return stats_map
 
+    def sync_market_price_stats_table(self) -> int:
+        """Menghitung dan menyimpan ringkasan statistik varian ke tabel market_price_stats."""
+        stats_map = self.get_all_variant_stats_map()
+        today = datetime.now(timezone.utc).date()
+        now = datetime.now(timezone.utc)
+
+        self.db.query(MarketPriceStats).filter(MarketPriceStats.stat_date == today).delete()
+
+        saved = 0
+        for var_id, st in stats_map.items():
+            record = MarketPriceStats(
+                stat_date=today,
+                variant_id=var_id,
+                city=None,
+                sample_count=st["sample_count"],
+                price_min=st["price_min"],
+                price_p25=st["price_p25"],
+                price_median=st["price_median"],
+                price_p75=st["price_p75"],
+                price_max=st["price_max"],
+                calculated_at=now
+            )
+            self.db.add(record)
+            saved += 1
+
+        self.db.commit()
+        return saved
+
+    def recalculate_all_market_stats(self) -> int:
+        """Alias untuk sinkronisasi tabel statistik harga pasar."""
+        return self.sync_market_price_stats_table()
+
+
     def calculate_variant_pricing_stats(
         self,
         variant_id: int,

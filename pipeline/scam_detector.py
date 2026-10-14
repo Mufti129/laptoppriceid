@@ -58,11 +58,14 @@ class LaptopScamDetector:
 
         # 4. Anomali Harga Ekstrim Terhadap MSRP Baru
         if expected_msrp and expected_msrp > 0:
-            # Jika harga di bawah 15% dari MSRP baru untuk laptop modern (misal Legion 25jt dijual 2jt)
-            if price < (expected_msrp * 0.15) and price < 5_000_000:
+            # Jika ada kata kunci DP/Kredit dan harga sangat murah dibanding MSRP
+            if price < (expected_msrp * 0.25):
                 for pat in DP_SCAM_PATTERNS:
                     if re.search(pat, text_corpus):
                         return True, "DP_CLICKBAIT", f"Harga anomali ({price:,.0f}) dengan keyword cicilan: '{pat}'"
+            
+            # Jika harga di bawah 8% dari MSRP untuk laptop kelas flagship (misal laptop 25jt dijual < 1.5jt tanpa minus)
+            if price < (expected_msrp * 0.08) and expected_msrp > 18_000_000 and price < 2_000_000:
                 return True, "SUSPICIOUS_ANOMALY", f"Harga sangat tidak wajar ({price:,.0f} vs MSRP {expected_msrp:,.0f})"
 
         # 5. Batas Minimum Absolut

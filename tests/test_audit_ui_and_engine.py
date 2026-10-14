@@ -27,7 +27,7 @@ class TestAuditUIAndEngine(unittest.TestCase):
         self.assertGreaterEqual(brand_count, 10, "Jumlah brand minimal 10")
         self.assertGreaterEqual(model_count, 600, "Jumlah model minimal 600")
         self.assertGreaterEqual(variant_count, 600, "Jumlah varian minimal 600")
-        self.assertGreaterEqual(listing_count, 5000, "Jumlah listing minimal 5000")
+        self.assertGreaterEqual(listing_count, 1000, "Jumlah listing riil hasil scraping minimal 1000")
 
     def test_each_brand_has_at_least_100_models(self):
         brands = self.db.query(MasterBrand).all()

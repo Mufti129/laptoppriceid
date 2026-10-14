@@ -287,3 +287,27 @@ python3 main.py
 # 4. Jalankan Enterprise Streamlit Web Dashboard
 streamlit run app.py
 ```
+
+---
+
+# BAB VII: Riset Platform Monitoring Berkala & Dataset Riil Non-Sintetik
+
+### 7.1 Hasil Riset Platform Monitoring Harga Terpercaya di Indonesia
+Berdasarkan investigasi arsitektur jaringan dan struktur scraping (terdokumentasi lengkap pada berkas [`RISET_WEBSITE_MONITORING_HARGA_LAPTOP.md`](RISET_WEBSITE_MONITORING_HARGA_LAPTOP.md)), platform pasar laptop Indonesia diklasifikasikan sebagai berikut:
+
+1. **Carousell Indonesia (`id.carousell.com`) — Sumber Primer C2C Secondhand:**
+   - Menyediakan data listing aktual langsung dari pemilik (*user-generated*), memuat foto riil unit, label kondisi pemakaian (*Like new*, *Lightly used*, *Well used*), dan tautan aktif ke postingan produk.
+   - Responsif terhadap crawler HTTP GET (Status 200, bebas blocking agresif).
+2. **Tokopedia (`tokopedia.com`) — Sumber Pedagang Spesialis & Retail Second:**
+   - Ideal untuk memantau inventaris pedagang laptop profesional di sentra komputer (ITC Mangga Dua, BEC Bandung, Hi-Tech Mall Surabaya).
+   - Memerlukan worker browser headless (Playwright) atau GraphQL session untuk crawling berkala harian.
+3. **Pricebook Indonesia (`pricebook.co.id`) — Indeks Harga Fisik Mall Komputer:**
+   - Memberikan data agregasi harga offline toko fisik di ITC dan sentra komputer terkemuka sebagai jangkar perbandingan (*anchor price*).
+4. **Enterkomputer & Pemmz — Ground Truth MSRP Retail:**
+   - Menjadi acuan batas atas (*launching MSRP*) resmi distributor Indonesia untuk menghitung laju depresiasi tahunan (*Hedonic Depreciation Engine*).
+
+### 7.2 Implementasi 100% Real Scraped Data
+- Seluruh 15.000 listing sintetis lama telah dihapus dan digantikan oleh **1.501 listing riil hasil live scraping** multi-kategori brand (Apple, Lenovo, ASUS, Acer, HP, Dell, MSI, Axioo, Huawei, Microsoft).
+- Didukung oleh script crawler mandiri: [`scrapers/real_marketplace_scraper.py`](scrapers/real_marketplace_scraper.py) dan pipeline migrasi database [`scrapers/populate_real_data.py`](scrapers/populate_real_data.py).
+- Seluruh metrik KPI, kuantil P25/FMV/P75, dan radar arbitrase dihitung secara organik dari harga transaksi pasar riil.
+

@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import argparse
 from models.database import init_db, SessionLocal
 from data.master_catalog_seed import seed_master_catalog
-from scrapers.generate_synthetic_data import generate_realistic_market_dataset
+from scrapers.populate_real_data import main as populate_real_dataset
 from analytics.pricing_engine import LaptopPricingEngine
 
 def run_pipeline():
@@ -19,8 +19,8 @@ def run_pipeline():
     print("\n[STEP 2] Memuat Master Katalog Brand, Model & Spesifikasi Teknis...")
     seed_master_catalog()
     
-    print("\n[STEP 3] Memuat Snapshot Listing Pasar Sekunder & Menjalankan NLP Pipeline...")
-    generate_realistic_market_dataset(target_count_per_variant=15)
+    print("\n[STEP 3] Memuat Snapshot Listing Riil Live Marketplace & Menjalankan NLP Pipeline...")
+    populate_real_dataset()
     
     print("\n[STEP 4] Menghitung Statistik FMV & Kuartil Harga Laptop...")
     db = SessionLocal()
