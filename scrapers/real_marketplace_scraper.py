@@ -29,25 +29,54 @@ INDONESIA_CITIES = [
 
 TARGET_KEYWORDS = [
     # 1. Apple
-    "macbook pro", "macbook air", "macbook m1", "macbook m2", "macbook retina", "macbook 2020", "macbook 2019",
+    "macbook pro", "macbook air", "macbook m1", "macbook m2", "macbook m3",
+    "macbook pro m1", "macbook pro m2", "macbook pro m3", "macbook air m1", "macbook air m2",
+    "macbook pro 13", "macbook pro 14", "macbook pro 15", "macbook pro 16",
+    "macbook retina", "macbook 2020", "macbook 2019", "macbook 2018", "macbook 2017", "macbook 2015",
+    
     # 2. Lenovo
-    "thinkpad", "thinkpad x1", "thinkpad t480", "thinkpad t14", "thinkpad x280", "lenovo legion", "lenovo loq", "ideapad slim",
+    "thinkpad", "thinkpad x1 carbon", "thinkpad x1 yoga", "thinkpad x1 extreme",
+    "thinkpad t480", "thinkpad t490", "thinkpad t14", "thinkpad t14s", "thinkpad t470",
+    "thinkpad x280", "thinkpad x270", "thinkpad x13", "thinkpad l14", "thinkpad l13", "thinkpad e14",
+    "lenovo legion 5", "lenovo legion 7", "lenovo legion pro", "lenovo loq", "lenovo loq 15",
+    "ideapad gaming 3", "ideapad slim 3", "ideapad slim 5", "lenovo yoga 7i", "lenovo yoga 9i", "lenovo yoga slim",
+
     # 3. ASUS
-    "asus rog", "asus tuf gaming", "asus zenbook", "asus vivobook", "rog zephyrus", "asus expertbook",
+    "asus rog", "rog zephyrus g14", "rog zephyrus g15", "rog zephyrus g16", "rog strix g15", "rog strix g16", "rog flow x13",
+    "asus tuf gaming", "asus tuf f15", "asus tuf a15", "asus tuf dash f15",
+    "asus zenbook", "asus zenbook 14", "asus zenbook duo", "asus zenbook s13", "asus zenbook oled",
+    "asus vivobook", "asus vivobook 14", "asus vivobook 15", "asus vivobook pro 15", "asus vivobook go", "asus expertbook",
+
     # 4. Acer
-    "acer nitro", "acer predator", "acer swift", "acer aspire",
+    "acer nitro 5", "acer nitro 16", "acer nitro", "acer predator helios 300", "acer predator helios 16", "acer predator",
+    "acer swift 3", "acer swift 5", "acer swift go", "acer swift x",
+    "acer aspire 3", "acer aspire 5", "acer aspire 7", "acer aspire", "acer spin 5",
+
     # 5. HP
-    "hp victus", "hp omen", "hp pavilion", "hp elitebook", "hp envy", "hp probook",
+    "hp victus", "hp victus 15", "hp victus 16", "hp omen", "hp omen 16", "hp omen 15",
+    "hp pavilion gaming", "hp pavilion", "hp pavilion aero", "hp pavilion 14", "hp pavilion 15",
+    "hp elitebook", "hp elitebook 840", "hp elitebook 830", "hp elitebook 1040",
+    "hp probook 440", "hp probook 450", "hp envy 13", "hp envy 15", "hp envy x360", "hp spectre x360",
+
     # 6. Dell
-    "dell xps", "dell latitude", "dell inspiron", "dell precision", "dell alienware", "dell g15",
+    "dell xps", "dell xps 13", "dell xps 15", "dell xps 17",
+    "dell latitude", "dell latitude 7490", "dell latitude 7400", "dell latitude 7420", "dell latitude 5400", "dell latitude 5420", "dell latitude 5430",
+    "dell inspiron", "dell inspiron 14", "dell inspiron 15", "dell inspiron 5400",
+    "dell g15", "dell g15 5515", "dell alienware", "dell precision",
+
     # 7. MSI
-    "msi katana", "msi modern", "msi bravo", "msi gf63", "msi stealth",
+    "msi katana", "msi katana gf66", "msi thin gf63", "msi cyborg 15", "msi modern 14", "msi modern 15",
+    "msi bravo 15", "msi stealth 15", "msi raider ge66", "msi prestige 14",
+
     # 8. Axioo
-    "axioo pongo", "axioo hype", "axioo mybook",
+    "axioo pongo", "axioo pongo 725", "axioo pongo 760", "axioo hype", "axioo hype 3", "axioo hype 5", "axioo hype 7", "axioo mybook", "axioo mybook 14",
+
     # 9. Huawei
-    "huawei matebook", "matebook d14", "matebook d15",
+    "huawei matebook", "matebook d14", "matebook d15", "matebook d16", "matebook 14", "matebook 14s", "matebook x pro",
+
     # 10. Microsoft
-    "surface pro", "surface laptop", "microsoft surface"
+    "surface pro", "surface pro 7", "surface pro 8", "surface pro 9", "surface pro x", "surface pro 6",
+    "surface laptop", "surface laptop 3", "surface laptop 4", "surface laptop 5", "surface laptop go", "microsoft surface"
 ]
 
 class RealMarketplaceScraper:
@@ -168,13 +197,19 @@ class RealMarketplaceScraper:
 
         return results
 
-    def harvest_all_keywords(self, keywords: Optional[List[str]] = None, max_items: int = 1500) -> List[Dict[str, Any]]:
-        """Mengambil data riil dari seluruh target keyword."""
+    def harvest_all_keywords(
+        self,
+        keywords: Optional[List[str]] = None,
+        max_items: int = 5000,
+        existing_listings: Optional[List[Dict[str, Any]]] = None
+    ) -> List[Dict[str, Any]]:
+        """Mengambil data riil dari seluruh target keyword dan menggabungkan dengan data riil yang sudah ada."""
         kw_list = keywords or TARGET_KEYWORDS
-        all_listings = []
-        global_seen = set()
+        all_listings = list(existing_listings) if existing_listings else []
+        global_seen = set(x["external_id"] for x in all_listings if "external_id" in x)
 
         print(f"[SCRAPER] Memulai harvesting data riil untuk {len(kw_list)} kategori keyword...")
+        print(f"[SCRAPER] Data riil awal sebelum scraping: {len(all_listings)} listing.")
         for idx, kw in enumerate(kw_list):
             print(f"[{idx+1}/{len(kw_list)}] Scraping keyword: '{kw}'...", end="", flush=True)
             items = self.scrape_carousell_keyword(kw)
@@ -190,7 +225,7 @@ class RealMarketplaceScraper:
                 print(f"[SCRAPER] Telah mencapai target kapasitas {max_items} listing riil.")
                 break
 
-        print(f"[SCRAPER] Selesai harvesting Carousell! Total unik listing riil: {len(all_listings)}")
+        print(f"[SCRAPER] Selesai harvesting Carousell! Total unik listing riil murni: {len(all_listings)}")
         return all_listings
 
     @staticmethod

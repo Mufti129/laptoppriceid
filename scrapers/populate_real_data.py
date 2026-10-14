@@ -223,23 +223,39 @@ CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 
 def main():
     print("=" * 70)
-    print("MIGRASI DATASET LAPTOPPRICE ID: 60 SAMPEL PER MODEL (60.000 LISTING)")
-    print("Platform: Tokopedia (Verified Stores), Carousell ID (C2C), Shopee (Refurbished)")
+    print("MIGRASI DATASET LAPTOPPRICE ID: 100% REAL LIVE SCRAPED DATA (OPSI B)")
+    print("Platform: Carousell ID (Live Web C2C - Expanded 115+ Keywords)")
     print("=" * 70)
     
-    db = SessionLocal()
-    init_db()
+    existing_listings = []
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                existing_listings = json.load(f)
+            print(f"[CACHE] Memuat {len(existing_listings)} listing riil sebelumnya dari cache.")
+        except Exception:
+            existing_listings = []
 
-    print("\n[GENERATION] Menghasilkan 60 sampel data terstruktur per model untuk 1.000 Master Model...")
-    dataset_60 = RealMarketplaceScraper.generate_dataset_60_samples_per_model(db, samples_per_model=60)
-    print(f"[GENERATION] Sukses! Terbuat {len(dataset_60)} listing riil multi-platform.")
+    print(f"\n[LIVE SCRAPING] Menjalankan crawling live ke Carousell ID untuk 115+ keyword spesifik...")
+    scraper = RealMarketplaceScraper(request_delay=0.4)
+    expanded_real_listings = scraper.harvest_all_keywords(
+        max_items=4000,
+        existing_listings=existing_listings
+    )
 
-    db.close()
+    print(f"\n[CACHE] Menyimpan total {len(expanded_real_listings)} listing riil murni ke {CACHE_FILE}...")
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(expanded_real_listings, f, ensure_ascii=False, indent=2)
+        print("[CACHE] Penyimpanan cache berhasil.")
+    except Exception as e:
+        print(f"[CACHE ERROR] {e}")
 
-    # Ingest 60.000 listings
-    ingest_real_listings(dataset_60, purge_old=True)
+    # Ingest 100% data riil murni ke database
+    print(f"\n[INGESTION] Memasukkan {len(expanded_real_listings)} listing riil hasil scraping murni ke database...")
+    ingest_real_listings(expanded_real_listings, purge_old=True)
     print("=" * 70)
-    print("MIGRASI DATASET 60.000 LISTING MULTI-PLATFORM SELESAI DENGAN SUKSES!")
+    print("OPSI B SELESAI: DATABASE 100% RIIL TEREXPANSI DARI LIVE MARKETPLACE CAROUSELL ID!")
     print("=" * 70)
 
 if __name__ == "__main__":
