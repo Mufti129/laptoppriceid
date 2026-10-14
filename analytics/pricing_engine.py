@@ -182,7 +182,9 @@ class LaptopPricingEngine:
         hinge_condition: str = "Normal Kokoh",
         screen_condition: str = "Normal Jernih",
         keyboard_condition: str = "Normal Aktif",
-        bios_mdm_status: str = "Clean"
+        bios_mdm_status: str = "Clean",
+        bios_security: Optional[str] = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Menghitung Penyesuaian Harga Hedonik (Hedonic Quality Valuation) khusus Laptop.
@@ -261,8 +263,9 @@ class LaptopPricingEngine:
             adj_pct -= 0.04
             breakdown.append(("Lampu Backlight Keyboard Mati", -0.04))
 
-        # 8. Keamanan BIOS & MDM
-        if "Locked" in bios_mdm_status or "Lock" in bios_mdm_status or "Computrace" in bios_mdm_status:
+        # 8. Keamanan BIOS & MDM (Mendukung alias bios_security & bios_mdm_status)
+        effective_bios = bios_security if bios_security is not None else bios_mdm_status
+        if "Locked" in effective_bios or "Lock" in effective_bios or "Computrace" in effective_bios:
             adj_pct -= 0.30
             breakdown.append(("BIOS Lock / Computrace / MDM Locked", -0.30))
 
@@ -273,8 +276,10 @@ class LaptopPricingEngine:
         return {
             "base_fmv": base_fmv,
             "net_adjustment_pct": adj_pct * 100.0,
+            "total_delta_pct": adj_pct * 100.0,
             "adjusted_price": adjusted_price,
-            "adjustment_breakdown": breakdown
+            "adjustment_breakdown": breakdown,
+            "breakdown": {name: delta * 100.0 for name, delta in breakdown}
         }
 
     def find_hot_deals(self, discount_threshold_pct: float = 12.0) -> List[Dict[str, Any]]:

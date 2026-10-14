@@ -23,6 +23,7 @@ class TestDeploymentNavigation(unittest.TestCase):
             self.assertGreater(len(at.sidebar.radio), 0, f'Sidebar blank on {opt}')
             self.assertGreater(len(at.main), 0, f'Main blank on {opt}')
             self.assertEqual(len(at.exception), 0, f'Exception on {opt}: {at.exception}')
+            self.assertEqual(len(at.error), 0, f'Error notification on {opt}: {[e.value for e in at.error]}')
 
     def test_streamlit_app_navigation(self):
         """Verifikasi bahwa streamlit_app.py dapat berpindah semua menu tanpa blank."""
@@ -36,6 +37,7 @@ class TestDeploymentNavigation(unittest.TestCase):
             self.assertGreater(len(at.sidebar.radio), 0, f'Sidebar blank on {opt}')
             self.assertGreater(len(at.main), 0, f'Main blank on {opt}')
             self.assertEqual(len(at.exception), 0, f'Exception on {opt}: {at.exception}')
+            self.assertEqual(len(at.error), 0, f'Error notification on {opt}: {[e.value for e in at.error]}')
 
 if __name__ == '__main__':
     unittest.main()

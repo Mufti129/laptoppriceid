@@ -169,11 +169,12 @@ def render_fmv_calculator(db: Session):
                         hinge_condition=h_cond,
                         screen_condition=s_cond,
                         keyboard_condition=k_cond,
+                        bios_mdm_status=sec_cond,
                         bios_security=sec_cond
                     )
 
-                    adj_price = hedonic_res["adjusted_price"]
-                    tot_delta_pct = hedonic_res["total_delta_pct"]
+                    adj_price = hedonic_res.get("adjusted_price", base_median_fmv)
+                    tot_delta_pct = hedonic_res.get("total_delta_pct", hedonic_res.get("net_adjustment_pct", 0.0))
                     tot_depr = LaptopDepreciationEngine.calculate_real_depreciation(msrp_num, adj_price)
 
                     st.markdown(f"""
@@ -187,7 +188,10 @@ def render_fmv_calculator(db: Session):
                     """, unsafe_allow_html=True)
 
                     with st.expander("Lihat Rincian Koefisien Bobot Hedonik Kualitas"):
-                        for item, delta in hedonic_res["breakdown"].items():
+                        breakdown_data = hedonic_res.get("breakdown")
+                        if not isinstance(breakdown_data, dict):
+                            breakdown_data = {k: v * 100.0 if abs(v) <= 1.0 else v for k, v in hedonic_res.get("adjustment_breakdown", [])}
+                        for item, delta in breakdown_data.items():
                             c_color = "#34d399" if delta > 0 else ("#f87171" if delta < 0 else "#94a3b8")
                             st.markdown(f"- **{item}:** <span style='color:{c_color}; font-weight:700;'>{delta:+.1f}%</span>", unsafe_allow_html=True)
     except Exception as e:
