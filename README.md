@@ -9,7 +9,7 @@ Platform riset ekonometrik, intelligence pasar sekunder, dan kalkulator valuasi 
 1. **AI & NLP Data Refinement Pipeline:**
    - Normalisasi teks bahasa pasar Indonesia untuk spesifikasi teknis CPU, GPU TGP, RAM SODIMM vs Soldered, SSD NVMe, kondisi baterai (*Cycle Count*, *Battery Health*, Baterai Drop), dan cacat layar (*Whitespot*, *Dead Pixel*, *Flexgate*).
    - Deteksi otomatis iklan pancingan DP/angsuran, spek usang yang disamarkan (*misal Intel Core i7 Gen 1*), dan unit terkunci BIOS/Computrace/MDM.
-   - RapidFuzz entity matching untuk resolusi judul listing marketplace ke master katalog varian resmi.
+   - **Deep Generational Entity Matcher (`pipeline/entity_matcher.py`):** Pencocokan varian berbasis token N-Gram dan verifikasi generasi CPU/chipset (misal Apple M1 vs M2/M3, ThinkPad Gen 1 vs Gen 4) untuk mencegah false-positive cross-generation.
 
 2. **Econometric Valuation Engine (Lancaster-Rosen Hedonic Model):**
    - Eliminasi anomali harga menggunakan metode **Tukey Interquartile Range (IQR)**.
@@ -19,8 +19,10 @@ Platform riset ekonometrik, intelligence pasar sekunder, dan kalkulator valuasi 
 3. **Arbitrage & Hot Deals Radar:**
    - Detektor otomatis listing laptop yang dijual di bawah nilai pasar wajar (*undervalued*) dengan kalkulasi potensi margin keuntungan reseller (Tier 1 Super Arbitrage $\ge 22\%$, Tier 2 High $15-21\%$, Tier 3 Moderate $12-14\%$).
 
-4. **Executive Streamlit Web Dashboard:**
+4. **Modular Executive Streamlit Web Dashboard (`views/`):**
    - Tampilan responsif dengan tema *Executive Dark Slate* yang nyaman dipandang.
+   - **Arsitektur Modular Per Tampilan:** Kode dashboard dipecah secara bersih ke dalam direktori `views/` (`market_overview.py`, `fmv_calculator.py`, `price_corridors.py`, `arbitrage_radar.py`, `spec_matrix.py`, `master_catalog.py`, `data_explorer.py`).
+   - **Sinkronisasi URL Query Params (`st.query_params`):** Setiap modul dapat diakses dan dibagikan secara instan melalui link URL langsung (misal `?menu=fmv`, `?menu=catalog`).
    - Visualisasi gambar produk laptop beresolusi tinggi pada seluruh lini brand & model.
    - 7 Modul Analisis Lengkap:
      - *Market Overview & Dashboard* (Statistik pasar makro & showcase featured flagships)

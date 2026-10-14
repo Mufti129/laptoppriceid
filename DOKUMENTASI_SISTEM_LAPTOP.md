@@ -56,7 +56,7 @@ Pasar laptop bekas di Indonesia memiliki tingkat kompleksitas teknis dan risiko 
 |  - Indonesian Laptop Slang Dictionary (Garansi ID, Baterai Drop, Whitespot, Engsel)|
 |  - DP Scam, Fake CPU Gen & Locked BIOS Detector                                   |
 |  - Hardware Metadata Extractor (CPU, GPU, RAM, SSD NVMe, Battery Wh, Layar)       |
-|  - RapidFuzz Entity Matcher (Multi-token resolution ke Master Varian Laptop)      |
+|  - Deep Generational Entity Matcher (N-Gram Token & Verifikasi Generasi CPU/Chip) |
 +-----------------------------------------------------------------------------------+
                                          |
                                          v
@@ -80,10 +80,15 @@ Pasar laptop bekas di Indonesia memiliki tingkat kompleksitas teknis dan risiko 
                                          |
                                          v
 +-----------------------------------------------------------------------------------+
-|             5. ENTERPRISE STREAMLIT USER INTERFACE & VISUALIZATION                |
-|  - Live Marketplace Explorer & Filter        - Interactive FMV Hedonic Calculator |
-|  - 3-Tier Price Corridor Visualizer          - Hardware Spec Comparison Matrix    |
-|  - Real Depreciation Curve Analysis          - Arbitrage & Hot Deals Radar        |
+|         5. MODULAR STREAMLIT USER INTERFACE & VISUALIZATION (views/)              |
+|  - views/market_overview.py (Dashboard Makro & Featured Flagships Showcase)       |
+|  - views/fmv_calculator.py (Kalkulator FMV + Foto Produk + 8 Penalti Hedonik)     |
+|  - views/price_corridors.py (3-Tier Price Corridors & Quantiles Bar Chart)        |
+|  - views/arbitrage_radar.py (Arbitrage Scanner & Top 3 Visual Deal Cards)         |
+|  - views/spec_matrix.py (Head-to-Head Comparison & Side-by-Side Photo Cards)     |
+|  - views/master_catalog.py (Master Explorer: Tabel Lengkap vs Galeri Kartu Visual)|
+|  - views/data_explorer.py (Live Raw Listing Audit & Test Parser NLP)             |
+|  - URL State Sync via st.query_params (Shareable Module Links)                    |
 +-----------------------------------------------------------------------------------+
 ```
 
