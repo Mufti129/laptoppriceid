@@ -22,13 +22,20 @@ def render_data_explorer(db: Session):
     """, unsafe_allow_html=True)
 
     try:
-        f_status = st.radio("Saring Data Listing:", ["Semua Listing", "Listing Tunai Valid", "Iklan DP Semu / Terdeteksi Scam"], horizontal=True)
+        col_f1, col_f2 = st.columns([1.2, 1])
+        with col_f1:
+            f_status = st.radio("Saring Status Validasi:", ["Semua Listing", "Listing Tunai Valid", "Iklan DP Semu / Terdeteksi Scam"], horizontal=True)
+        with col_f2:
+            f_platform = st.selectbox("Saring Platform Marketplace:", ["Semua Platform", "Tokopedia", "Carousell", "Shopee"])
 
         q = db.query(ScrapedListing)
         if f_status == "Listing Tunai Valid":
             q = q.filter(ScrapedListing.is_dp_price == False)
         elif f_status == "Iklan DP Semu / Terdeteksi Scam":
             q = q.filter(ScrapedListing.is_dp_price == True)
+
+        if f_platform != "Semua Platform":
+            q = q.filter(ScrapedListing.source_platform == f_platform.lower())
 
         raw_rows = q.order_by(ScrapedListing.id.desc()).limit(150).all()
 
@@ -38,20 +45,20 @@ def render_data_explorer(db: Session):
                 data.append({
                     "ID": r.id,
                     "Platform": r.source_platform.upper(),
+                    "Toko / Seller": r.seller_name or "-",
                     "Judul Iklan": r.title,
                     "Harga (IDR)": f"Rp {r.price:,.0f}",
                     "Status": "⚠️ DP / Scam" if r.is_dp_price else "✅ Tunai Valid",
                     "Kota": r.city or "-",
                     "Garansi": r.warranty_type or "-",
                     "Baterai": r.battery_condition or "-",
-                    "Engsel": r.hinge_condition or "-",
-                    "Layar": r.screen_condition or "-"
+                    "Fisik": r.physical_grade or "-"
                 })
             df_raw = pd.DataFrame(data)
             st.dataframe(df_raw, use_container_width=True, hide_index=True)
-            st.caption(f"Menampilkan {len(raw_rows)} listing terbaru dari total database.")
+            st.caption(f"Menampilkan {len(raw_rows)} listing terbaru ({f_platform}) dari total database.")
         else:
-            st.info("Belum ada data listing yang cocok.")
+            st.info("Belum ada data listing yang cocok dengan filter.")
 
         st.markdown("---")
         st.markdown("### Uji Coba Langsung Parser NLP & Detektor Scam")

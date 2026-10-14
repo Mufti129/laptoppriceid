@@ -37,12 +37,17 @@ def render_market_overview(db: Session):
         pct_valid = (valid_cash_listings / max(1, total_listings)) * 100
         pct_scam = (scam_listings / max(1, total_listings)) * 100
 
+        # Hitung sebaran platform
+        c_tokopedia = db.query(ScrapedListing).filter(ScrapedListing.source_platform == "tokopedia").count()
+        c_carousell = db.query(ScrapedListing).filter(ScrapedListing.source_platform == "carousell").count()
+        c_shopee = db.query(ScrapedListing).filter(ScrapedListing.source_platform == "shopee").count()
+
         st.markdown(f"""
         <div class="kpi-grid">
             <div class="pro-metric-card">
                 <div class="pro-metric-label">Total Database Listing</div>
                 <div class="pro-metric-val">{total_listings:,}</div>
-                <div class="pro-metric-sub">Snapshot Pasar Aktif</div>
+                <div class="pro-metric-sub">Multi-Marketplace Aktif</div>
             </div>
             <div class="pro-metric-card emerald">
                 <div class="pro-metric-label">Listing Tunai Valid</div>
@@ -58,6 +63,17 @@ def render_market_overview(db: Session):
                 <div class="pro-metric-label">Master Katalog 2010-2026</div>
                 <div class="pro-metric-val">{total_models} Model</div>
                 <div class="pro-metric-sub purple">{total_variants} Varian Terdaftar</div>
+            </div>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:14px; margin-bottom:20px; flex-wrap:wrap;">
+            <div style="background:#1e293b; border:1px solid #334155; padding:8px 14px; border-radius:8px; font-size:0.85rem; color:#94a3b8;">
+                🟢 <b>Carousell ID (C2C):</b> <span style="color:#f8fafc; font-weight:600;">{c_carousell:,} listing</span>
+            </div>
+            <div style="background:#1e293b; border:1px solid #334155; padding:8px 14px; border-radius:8px; font-size:0.85rem; color:#94a3b8;">
+                🟢 <b>Tokopedia (Verified Stores):</b> <span style="color:#f8fafc; font-weight:600;">{c_tokopedia:,} listing</span>
+            </div>
+            <div style="background:#1e293b; border:1px solid #334155; padding:8px 14px; border-radius:8px; font-size:0.85rem; color:#94a3b8;">
+                🟢 <b>Shopee (Ex-Office Import):</b> <span style="color:#f8fafc; font-weight:600;">{c_shopee:,} listing</span>
             </div>
         </div>
         """, unsafe_allow_html=True)

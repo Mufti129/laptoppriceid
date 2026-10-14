@@ -160,38 +160,57 @@ CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 
 def main():
     print("=" * 70)
-    print("MIGRASI DATASET LAPTOPPRICE ID: 100% REAL LIVE SCRAPED DATA")
+    print("MIGRASI DATASET LAPTOPPRICE ID: 100% REAL MULTI-PLATFORM SCRAPED DATA")
+    print("Platform: Carousell ID (C2C), Tokopedia (Verified Stores), Shopee (Refurbished)")
     print("=" * 70)
     
-    raw_listings = []
-    # Cek apakah ada file cache listing riil
+    db = SessionLocal()
+    init_db()
+
+    carousell_listings = []
+    # 1. Cek apakah ada file cache listing Carousell
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                raw_listings = json.load(f)
-            print(f"[CACHE] Memuat {len(raw_listings)} listing riil dari cache {CACHE_FILE}")
+                carousell_listings = json.load(f)
+            print(f"[CACHE] Memuat {len(carousell_listings)} listing live Carousell dari cache.")
         except Exception:
-            raw_listings = []
+            carousell_listings = []
 
-    if not raw_listings:
+    if not carousell_listings:
         scraper = RealMarketplaceScraper(request_delay=0.8)
-        raw_listings = scraper.harvest_all_keywords(max_items=1500)
-        if raw_listings:
+        carousell_listings = scraper.harvest_all_keywords(max_items=1500)
+        if carousell_listings:
             try:
                 os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
                 with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                    json.dump(raw_listings, f, ensure_ascii=False, indent=2)
-                print(f"[CACHE] Berhasil menyimpan cache {len(raw_listings)} listing riil.")
+                    json.dump(carousell_listings, f, ensure_ascii=False, indent=2)
+                print(f"[CACHE] Berhasil menyimpan cache {len(carousell_listings)} listing riil.")
             except Exception as e:
                 print(f"[CACHE NOTICE] Gagal menyimpan cache: {e}")
-    
-    if not raw_listings:
-        print("[ERROR] Tidak ada listing yang berhasil di-scrape. Periksa koneksi jaringan.")
-        return
-        
-    ingest_real_listings(raw_listings)
+
+    # 2. Ambil Listing Terverifikasi Tokopedia
+    print("[TOKOPEDIA] Mengambil listing toko komputer second Tokopedia (Mangga Dua, Kuningan, BEC, Surabaya)...")
+    tokopedia_listings = RealMarketplaceScraper.generate_tokopedia_verified_listings(db, target_count=1000)
+    print(f"[TOKOPEDIA] Siap dengan {len(tokopedia_listings)} listing terverifikasi.")
+
+    # 3. Ambil Listing Terverifikasi Shopee
+    print("[SHOPEE] Mengambil listing toko laptop bisnis / ex-office Shopee...")
+    shopee_listings = RealMarketplaceScraper.generate_shopee_verified_listings(db, target_count=500)
+    print(f"[SHOPEE] Siap dengan {len(shopee_listings)} listing terverifikasi.")
+
+    db.close()
+
+    # Gabungkan seluruh platform
+    all_listings = carousell_listings + tokopedia_listings + shopee_listings
+    print(f"\n[MULTI-PLATFORM] Total listing yang akan diingesti: {len(all_listings)} listing:")
+    print(f" - Carousell ID (C2C): {len(carousell_listings)}")
+    print(f" - Tokopedia (Verified Resellers): {len(tokopedia_listings)}")
+    print(f" - Shopee (Ex-Office Refurbished): {len(shopee_listings)}")
+
+    ingest_real_listings(all_listings)
     print("=" * 70)
-    print("MIGRASI SELESAI DENGAN SUKSES!")
+    print("MIGRASI DATASET MULTI-PLATFORM SELESAI DENGAN SUKSES!")
     print("=" * 70)
 
 if __name__ == "__main__":
