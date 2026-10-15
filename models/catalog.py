@@ -153,6 +153,7 @@ class ScrapedListing(Base):
     last_seen_at = Column(DateTime, default=datetime.utcnow)
     price_drop_count = Column(Integer, default=0)
     status = Column(String(20), default="ACTIVE")                       # 'ACTIVE', 'PRICE_DROP', 'DELISTED'
+    is_synthetic = Column(Boolean, default=False, nullable=False, index=True) # False = Data Riil Scraping, True = Dummy/Sintetis
 
     __table_args__ = (
         UniqueConstraint("source_platform", "external_id", name="uq_laptop_source_external_id"),

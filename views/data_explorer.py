@@ -22,17 +22,41 @@ def render_data_explorer(db: Session):
     """, unsafe_allow_html=True)
 
     try:
-        col_f1, col_f2 = st.columns([1.2, 1])
+        total_all = db.query(ScrapedListing).count()
+        total_real = db.query(ScrapedListing).filter(ScrapedListing.is_synthetic == False).count()
+        total_synth = db.query(ScrapedListing).filter(ScrapedListing.is_synthetic == True).count()
+        pct_real = (total_real / max(1, total_all)) * 100.0
+
+        st.markdown(f"""
+        <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:10px; padding:12px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+                <span style="font-weight:700; color:#f8fafc; font-size:0.95rem;">🔍 Audit Transparansi Data:</span>
+                <span style="color:#38bdf8; font-size:0.88rem; margin-left:8px;">Terdata <b>{total_real:,} Posting Riil Aktif ({pct_real:.1f}%)</b> | <b>{total_synth} Data Sintetis/Dummy</b></span>
+            </div>
+            <div style="background:{'#059669' if total_synth == 0 else '#eab308'}; color:#ffffff; font-size:0.75rem; font-weight:800; padding:4px 12px; border-radius:6px;">
+                {'✅ 100% DATA RIIL POSTINGAN' if total_synth == 0 else '⚠️ TERDETEKSI DATA SIMULASI'}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_f1, col_f2, col_f3 = st.columns([1.2, 1, 1])
         with col_f1:
             f_status = st.radio("Saring Status Validasi:", ["Semua Listing", "Listing Tunai Valid", "Iklan DP Semu / Terdeteksi Scam"], horizontal=True)
         with col_f2:
-            f_platform = st.selectbox("Saring Platform Marketplace:", ["Semua Platform", "Tokopedia", "Carousell", "Shopee"])
+            f_origin = st.selectbox("Saring Keaslian Data:", ["Semua Data", "🟢 Hanya Posting Riil", "⚠️ Hanya Sintetis/Dummy"])
+        with col_f3:
+            f_platform = st.selectbox("Saring Platform Marketplace:", ["Semua Platform", "Carousell", "Tokopedia", "Shopee"])
 
         q = db.query(ScrapedListing)
         if f_status == "Listing Tunai Valid":
             q = q.filter(ScrapedListing.is_dp_price == False)
         elif f_status == "Iklan DP Semu / Terdeteksi Scam":
             q = q.filter(ScrapedListing.is_dp_price == True)
+
+        if f_origin == "🟢 Hanya Posting Riil":
+            q = q.filter(ScrapedListing.is_synthetic == False)
+        elif f_origin == "⚠️ Hanya Sintetis/Dummy":
+            q = q.filter(ScrapedListing.is_synthetic == True)
 
         if f_platform != "Semua Platform":
             q = q.filter(ScrapedListing.source_platform == f_platform.lower())
@@ -42,21 +66,31 @@ def render_data_explorer(db: Session):
         if raw_rows:
             data = []
             for r in raw_rows:
+                is_syn = getattr(r, "is_synthetic", False)
                 data.append({
                     "ID": r.id,
+                    "Asal Data": "⚠️ Sintetis/Dummy" if is_syn else "🟢 Posting Riil",
                     "Platform": r.source_platform.upper(),
                     "Toko / Seller": r.seller_name or "-",
                     "Judul Iklan": r.title,
                     "Harga (IDR)": f"Rp {r.price:,.0f}",
                     "Status": "⚠️ DP / Scam" if r.is_dp_price else "✅ Tunai Valid",
                     "Kota": r.city or "-",
+                    "Link Listing": r.url or "",
                     "Garansi": r.warranty_type or "-",
                     "Baterai": r.battery_condition or "-",
                     "Fisik": r.physical_grade or "-"
                 })
             df_raw = pd.DataFrame(data)
-            st.dataframe(df_raw, use_container_width=True, hide_index=True)
-            st.caption(f"Menampilkan {len(raw_rows)} listing terbaru ({f_platform}) dari total database.")
+            st.dataframe(
+                df_raw,
+                column_config={
+                    "Link Listing": st.column_config.LinkColumn("Tautan Asli", display_text="Buka Iklan ↗")
+                },
+                use_container_width=True,
+                hide_index=True
+            )
+            st.caption(f"Menampilkan {len(raw_rows)} listing terbaru ({f_origin} | {f_platform}) dari total database.")
         else:
             st.info("Belum ada data listing yang cocok dengan filter.")
 

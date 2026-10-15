@@ -9,7 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from models.database import SessionLocal, init_db
 from models.catalog import MasterBrand, MasterModel, MasterVariant, ScrapedListing
 from data.master_catalog_seed import seed_master_catalog
-from scrapers.generate_synthetic_data import generate_realistic_market_dataset
+import json
+from scrapers.populate_real_data import ingest_real_listings
 
 # Import Modular Views
 from views import (
@@ -359,15 +360,22 @@ st.markdown("""
 # ==============================================================================
 @st.cache_resource(show_spinner="Inisialisasi Database & Master Katalog Laptop...")
 def ensure_database_ready():
-    """Memastikan database terinisialisasi dan terisi katalog komprehensif laptop."""
+    """Memastikan database terinisialisasi dan terisi katalog komprehensif laptop serta data riil."""
     init_db()
     db = SessionLocal()
     try:
         if db.query(MasterVariant).count() == 0:
             seed_master_catalog()
-            generate_realistic_market_dataset(target_count_per_variant=15)
-        elif db.query(ScrapedListing).count() == 0:
-            generate_realistic_market_dataset(target_count_per_variant=15)
+
+        if db.query(ScrapedListing).count() == 0:
+            cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "real_listings_cache.json")
+            if os.path.exists(cache_path):
+                print(f"[INIT] Memulihkan database dengan 100% data riil dari {cache_path}...")
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    cached_data = json.load(f)
+                ingest_real_listings(cached_data, purge_old=False)
+            else:
+                print("[INFO] Database listing kosong. Jalankan scraper live (python scrapers/daemon.py --run-once) untuk mengambil data riil marketplace.")
     except Exception as e:
         print(f"[WARN] Error on DB init: {e}")
     finally:

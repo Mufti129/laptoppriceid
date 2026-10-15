@@ -175,6 +175,7 @@ def ingest_real_listings(raw_listings, purge_old: bool = False):
                     city=city,
                     seller_name=raw.get("seller_name", "Seller Terverifikasi"),
                     seller_type=raw.get("seller_type", "Store / Toko Komputer"),
+                    is_synthetic=False,
                     last_seen_at=datetime.utcnow(),
                     scraped_at=datetime.utcnow()
                 )
@@ -228,6 +229,7 @@ def ingest_real_listings(raw_listings, purge_old: bool = False):
                     city=city,
                     seller_name=raw.get("seller_name", "Seller Terverifikasi"),
                     seller_type="Individual",
+                    is_synthetic=False,
                     last_seen_at=datetime.utcnow(),
                     scraped_at=datetime.utcnow()
                 )

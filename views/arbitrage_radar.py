@@ -62,6 +62,9 @@ def render_arbitrage_radar(db: Session):
                                     <div style="font-family:'JetBrains Mono',monospace; font-size:0.95rem; font-weight:800; color:#34d399;">+Rp {deal['potential_profit']:,.0f}</div>
                                 </div>
                             </div>
+                            <a href="{deal['url']}" target="_blank" style="text-decoration:none; display:block; margin-top:10px; text-align:center; background:#0284c7; color:#ffffff; font-size:0.74rem; font-weight:700; padding:6px 10px; border-radius:6px; transition:background 0.2s;">
+                                🔗 Buka Iklan Asli Seller ({deal['platform'].title()}) ↗
+                            </a>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -69,11 +72,11 @@ def render_arbitrage_radar(db: Session):
             df_deals = pd.DataFrame(deals)
 
             display_df = df_deals[[
-                "deal_tier", "brand", "model", "variant", "price", "fmv_price", "discount_pct", "potential_profit", "city", "platform", "warranty_type", "battery_condition", "hinge_condition", "screen_condition"
+                "deal_tier", "brand", "model", "variant", "price", "fmv_price", "discount_pct", "potential_profit", "city", "platform", "url", "warranty_type", "battery_condition", "hinge_condition", "screen_condition"
             ]].copy()
 
             display_df.columns = [
-                "Tier Peluang", "Brand", "Model", "Varian", "Harga Listing", "FMV Pasar", "Diskon (%)", "Potensi Margin (IDR)", "Kota", "Platform", "Garansi", "Baterai", "Engsel", "Layar"
+                "Tier Peluang", "Brand", "Model", "Varian", "Harga Listing", "FMV Pasar", "Diskon (%)", "Potensi Margin (IDR)", "Kota", "Platform", "Tautan Asli", "Garansi", "Baterai", "Engsel", "Layar"
             ]
 
             display_df["Harga Listing"] = display_df["Harga Listing"].apply(lambda x: f"Rp {x:,.0f}")
@@ -81,7 +84,14 @@ def render_arbitrage_radar(db: Session):
             display_df["Potensi Margin (IDR)"] = display_df["Potensi Margin (IDR)"].apply(lambda x: f"Rp {x:,.0f}")
             display_df["Diskon (%)"] = display_df["Diskon (%)"].apply(lambda x: f"{x:.1f}%")
 
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            st.dataframe(
+                display_df,
+                column_config={
+                    "Tautan Asli": st.column_config.LinkColumn("Iklan Asli", display_text="Buka ↗")
+                },
+                use_container_width=True,
+                hide_index=True
+            )
         else:
             st.info(f"Tidak ada listing yang memenuhi kriteria diskon >= {disc_thresh}%.")
     except Exception as e:
