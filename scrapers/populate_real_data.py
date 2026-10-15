@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import time
 from datetime import datetime
 from models.database import SessionLocal, init_db
-from models.catalog import ScrapedListing, MarketPriceStats, MasterVariant, MasterModel, MasterBrand
+from models.catalog import ScrapedListing, MarketPriceStats, MasterVariant, MasterModel, MasterBrand, ListingPriceHistory
 from pipeline.normalizer import LaptopListingNormalizer
 from pipeline.scam_detector import LaptopScamDetector
 from pipeline.entity_matcher import LaptopEntityMatcher
@@ -15,6 +15,7 @@ from scrapers.real_marketplace_scraper import RealMarketplaceScraper, TARGET_KEY
 def purge_synthetic_data(db):
     """Mengosongkan tabel listing sintetis dan statistik harga lama."""
     print("[MIGRATION] Menghapus data listing lama / sintetik dari database...")
+    db.query(ListingPriceHistory).delete()
     count_deleted = db.query(ScrapedListing).delete()
     db.query(MarketPriceStats).delete()
     db.commit()
@@ -54,32 +55,75 @@ def clean_price_string(price_val) -> float:
             return 0.0
     return 0.0
 
-def ingest_real_listings(raw_listings, purge_old: bool = True):
+def ingest_real_listings(raw_listings, purge_old: bool = False):
     """
     Memproses dan menyimpan listing riil hasil scraping ke database
     melalui Normalizer NLP, Scam Detector, dan Entity Matcher.
-    Mendukung fast batch ingestion untuk dataset 60 sampel per model.
+    Mendukung Delta Tracking (pelacakan riwayat perubahan harga individual).
     """
     db = SessionLocal()
     init_db()
     
-    # 1. Kosongkan data sintetis lama jika diminta
+    # 1. Kosongkan data lama jika diminta
     if purge_old:
         purge_synthetic_data(db)
+        existing_map = {}
+    else:
+        existing_rows = db.query(ScrapedListing).all()
+        existing_map = {(row.source_platform, row.external_id): row for row in existing_rows}
+        print(f"[DELTA TRACKER] Terdata {len(existing_map)} listing eksisting untuk pelacakan delta harga.")
     
     matcher = LaptopEntityMatcher(db)
     saved_count = 0
+    updated_count = 0
+    price_drops_count = 0
     scam_count = 0
     matched_count = 0
     
     print(f"\n[INGESTION] Memulai pemrosesan {len(raw_listings)} listing riil...")
     start_time = time.time()
     
-    batch = []
+    batch_new = []
     BATCH_SIZE = 5000
     
     for idx, raw in enumerate(raw_listings):
         try:
+            platform = raw.get("source_platform", "carousell")
+            ext_id = raw.get("external_id")
+
+            # A. DELTA TRACKING: Jika listing sudah terdaftar di database
+            if (platform, ext_id) in existing_map:
+                existing_item = existing_map[(platform, ext_id)]
+                old_p = float(existing_item.price or 0)
+                raw_p = raw.get("price") or raw.get("price_raw")
+                new_p = clean_price_string(raw_p)
+
+                existing_item.last_seen_at = datetime.utcnow()
+
+                if new_p > 0 and abs(new_p - old_p) >= 10000:
+                    delta_val = new_p - old_p
+                    delta_pct = (delta_val / old_p) * 100.0 if old_p > 0 else 0.0
+
+                    hist_record = ListingPriceHistory(
+                        listing_id=existing_item.id,
+                        old_price=old_p,
+                        new_price=new_p,
+                        price_delta=delta_val,
+                        price_delta_pct=delta_pct,
+                        detected_at=datetime.utcnow()
+                    )
+                    db.add(hist_record)
+                    existing_item.price = new_p
+
+                    if delta_val < 0:
+                        existing_item.price_drop_count = (existing_item.price_drop_count or 0) + 1
+                        existing_item.status = "PRICE_DROP"
+                        price_drops_count += 1
+
+                updated_count += 1
+                continue
+
+            # B. LISTING BARU: Ingesti & Normalisasi
             # Jika sudah memiliki data terstruktur lengkap & matched_variant_id
             if raw.get("matched_variant_id"):
                 var_id = raw["matched_variant_id"]
@@ -107,8 +151,8 @@ def ingest_real_listings(raw_listings, purge_old: bool = True):
                     province = "DKI Jakarta"
                 
                 listing = ScrapedListing(
-                    source_platform=raw["source_platform"],
-                    external_id=raw["external_id"],
+                    source_platform=platform,
+                    external_id=ext_id,
                     url=raw["url"],
                     title=raw["title"],
                     raw_description=raw.get("raw_description", raw["title"]),
@@ -131,6 +175,7 @@ def ingest_real_listings(raw_listings, purge_old: bool = True):
                     city=city,
                     seller_name=raw.get("seller_name", "Seller Terverifikasi"),
                     seller_type=raw.get("seller_type", "Store / Toko Komputer"),
+                    last_seen_at=datetime.utcnow(),
                     scraped_at=datetime.utcnow()
                 )
             else:
@@ -183,31 +228,35 @@ def ingest_real_listings(raw_listings, purge_old: bool = True):
                     city=city,
                     seller_name=raw.get("seller_name", "Seller Terverifikasi"),
                     seller_type="Individual",
+                    last_seen_at=datetime.utcnow(),
                     scraped_at=datetime.utcnow()
                 )
 
-            batch.append(listing)
+            batch_new.append(listing)
             saved_count += 1
             
-            if len(batch) >= BATCH_SIZE:
-                db.bulk_save_objects(batch)
+            if len(batch_new) >= BATCH_SIZE:
+                db.bulk_save_objects(batch_new)
                 db.commit()
-                batch.clear()
+                batch_new.clear()
                 elapsed = time.time() - start_time
-                print(f" -> {saved_count}/{len(raw_listings)} listing riil berhasil disimpan ({saved_count/elapsed:.0f} rows/s)...")
+                print(f" -> {saved_count}/{len(raw_listings)} listing baru tersimpan ({saved_count/elapsed:.0f} rows/s)...")
                 
         except Exception as e:
             print(f"[ERROR] Gagal memproses listing {raw.get('external_id')}: {e}")
             
-    if batch:
-        db.bulk_save_objects(batch)
+    if batch_new:
+        db.bulk_save_objects(batch_new)
         db.commit()
-        batch.clear()
+        batch_new.clear()
 
+    db.commit()
     elapsed = time.time() - start_time
-    print(f"\n[INGESTION] Berhasil menyimpan {saved_count} listing riil dalam {elapsed:.2f} detik!")
-    print(f" - Matched ke Master Catalog: {matched_count} ({matched_count/max(saved_count, 1)*100:.1f}%)")
-    print(f" - Listing Tunai Valid: {saved_count - scam_count}")
+    print(f"\n[INGESTION] Selesai dalam {elapsed:.2f} detik!")
+    print(f" - Listing Baru Ditambahkan: {saved_count}")
+    print(f" - Listing Eksisting Diperbarui: {updated_count}")
+    print(f" - Deteksi Penurunan Harga (Price Drops): {price_drops_count}")
+    print(f" - Matched ke Master Catalog: {matched_count}")
     print(f" - Terfilter Scam / DP: {scam_count}")
     
     # 5. Rekalkulasi Statistik Pasar FMV

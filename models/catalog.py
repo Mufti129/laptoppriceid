@@ -147,16 +147,37 @@ class ScrapedListing(Base):
     seller_name = Column(String(150), nullable=True)
     seller_type = Column(String(50), default="Individual")              # 'Individual', 'Store / Toko Komputer'
 
-    # Timestamps
+    # Timestamps & Delta Tracking
     posted_at = Column(DateTime, nullable=True)
     scraped_at = Column(DateTime, default=datetime.utcnow)
-    status = Column(String(20), default="ACTIVE")
+    last_seen_at = Column(DateTime, default=datetime.utcnow)
+    price_drop_count = Column(Integer, default=0)
+    status = Column(String(20), default="ACTIVE")                       # 'ACTIVE', 'PRICE_DROP', 'DELISTED'
 
     __table_args__ = (
         UniqueConstraint("source_platform", "external_id", name="uq_laptop_source_external_id"),
     )
 
     matched_variant = relationship("MasterVariant", back_populates="scraped_listings")
+    price_history = relationship("ListingPriceHistory", back_populates="listing", cascade="all, delete-orphan")
+
+
+class ListingPriceHistory(Base):
+    """
+    Riwayat Perubahan Harga Listing Laptop (Delta Tracking & Price Drop Signals).
+    Mencatat pergerakan harga individual untuk mendeteksi unit diskon dan laju depresiasi.
+    """
+    __tablename__ = "listing_price_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("scraped_listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    old_price = Column(Numeric(15, 2), nullable=False)
+    new_price = Column(Numeric(15, 2), nullable=False)
+    price_delta = Column(Numeric(15, 2), nullable=False)                # new_price - old_price (negatif = harga turun)
+    price_delta_pct = Column(Numeric(6, 2), nullable=False)            # ((new_price - old_price) / old_price) * 100
+    detected_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    listing = relationship("ScrapedListing", back_populates="price_history")
 
 
 class MarketPriceStats(Base):
