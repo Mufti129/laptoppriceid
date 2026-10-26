@@ -113,10 +113,11 @@ def render_master_catalog(db: Session):
 
             return " & ".join(sources)
 
-        def generate_audit_search_keyword(brand_name, series_name, model_name, processor_model="", gpu_model="", vram_gb=0.0, ram=None, rom=None, platform=""):
+        def generate_audit_search_keyword(brand_name, series_name, model_name, processor_model="", gpu_model="", vram_gb=0.0, ram=None, rom=None, platform="", chassis_code=""):
             """Menghasilkan kata kunci pencarian audit persis untuk dicocokkan 1-to-1 di website sumber."""
             b_name = (brand_name or "").strip()
             m_name = (model_name or "").strip()
+            c_code = (chassis_code or "").strip()
 
             if m_name.lower().startswith(b_name.lower()):
                 base_name = m_name
@@ -150,6 +151,8 @@ def render_master_catalog(db: Session):
             # 1. iBox ID / Apple
             if "ibox" in plat_lower or b_name.lower() == "apple":
                 parts = [base_name]
+                if c_code and c_code.lower() not in base_name.lower():
+                    parts.append(c_code)
                 if cpu_clean and cpu_clean.lower() not in base_name.lower():
                     parts.append(cpu_clean)
                 if ram:
@@ -161,6 +164,8 @@ def render_master_catalog(db: Session):
             # 2. Pemmz.com / Gaming
             if "pemmz" in plat_lower or (gpu_clean and any(k in plat_lower for k in ["gaming", "pemmz"])):
                 parts = [base_name]
+                if c_code and c_code.lower() not in base_name.lower():
+                    parts.append(c_code)
                 if gpu_clean and gpu_clean.lower() not in base_name.lower():
                     parts.append(gpu_clean)
                 elif cpu_clean and cpu_clean.lower() not in base_name.lower():
@@ -169,6 +174,8 @@ def render_master_catalog(db: Session):
 
             # 3. Tokopedia / Carousell / Mainstream & Business
             parts = [base_name]
+            if c_code and c_code.lower() not in base_name.lower() and not c_code.startswith(f"{b_name}-"):
+                parts.append(c_code)
             if cpu_clean and cpu_clean.lower() not in base_name.lower():
                 parts.append(cpu_clean)
             elif gpu_clean and gpu_clean.lower() not in base_name.lower():
@@ -283,7 +290,7 @@ def render_master_catalog(db: Session):
                         img_url = m.image_url or get_product_image_url(b_name, m.series, m.name)
                         msrp_val = float(msrp) if msrp else 0
                         plat_val = get_model_platform(b_name, m.series, m.name, vid)
-                        audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val)
+                        audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val, m.chassis_code)
                         audit_url = get_audit_search_url(plat_val, audit_kw)
                         with cols[col_idx]:
                             st.markdown(f"""
@@ -297,8 +304,11 @@ def render_master_catalog(db: Session):
                                 <div class="laptop-card-content">
                                     <div class="laptop-card-title">{b_name} {m.name}</div>
                                     <div class="laptop-card-meta">{m.series or '-'}</div>
-                                    <div style="font-size:0.72rem; color:#38bdf8; font-weight:600; margin-bottom:2px;">
+                                    <div style="font-size:0.72rem; color:#38bdf8; font-weight:600; margin-bottom:1px;">
                                         🌐 Platfrom: {plat_val}
+                                    </div>
+                                    <div style="font-size:0.70rem; color:#10b981; font-weight:700; margin-bottom:2px;">
+                                        🏷️ Sasis/SKU: <code>{m.chassis_code or '-'}</code>
                                     </div>
                                     <div style="font-size:0.70rem; color:#a78bfa; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                                         🔍 Audit: <a href="{audit_url}" target="_blank" style="color:#c084fc; text-decoration:underline;">{audit_kw}</a>
@@ -323,11 +333,12 @@ def render_master_catalog(db: Session):
                 ram_up = "Dual SODIMM" if m.is_ram_upgradeable else "Soldered"
                 msrp_val = float(msrp) if msrp else 0
                 plat_val = get_model_platform(b_name, m.series, m.name, vid)
-                audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val)
+                audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val, m.chassis_code)
 
                 table_data.append({
                     "Brand": b_name,
                     "Model": m.name,
+                    "Kode Sasis / SKU": m.chassis_code or "-",
                     "Series": m.series or "-",
                     "Platfrom": plat_val,
                     "Kata Kunci Audit": audit_kw,
@@ -369,7 +380,7 @@ def render_master_catalog(db: Session):
                     insp_img = insp_m.image_url or get_product_image_url(insp_b, insp_m.series, insp_m.name)
                     insp_plat = get_model_platform(insp_b, insp_m.series, insp_m.name, insp_vid)
                     insp_audit_kw = generate_audit_search_keyword(
-                        insp_b, insp_m.series, insp_m.name, insp_m.processor_model, insp_m.gpu_model, insp_m.vram_gb, None, None, insp_plat
+                        insp_b, insp_m.series, insp_m.name, insp_m.processor_model, insp_m.gpu_model, insp_m.vram_gb, None, None, insp_plat, insp_m.chassis_code
                     )
                     insp_audit_url = get_audit_search_url(insp_plat, insp_audit_kw)
 
@@ -382,6 +393,7 @@ def render_master_catalog(db: Session):
                                 <div style="font-weight:800; color:#f8fafc; font-size:0.95rem;">{insp_m.name}</div>
                                 <div style="color:#60a5fa; font-size:0.78rem; margin-top:2px;">{insp_m.series or '-'} ({insp_m.release_year})</div>
                                 <div style="color:#38bdf8; font-size:0.75rem; margin-top:4px;">🌐 Platfrom: {insp_plat}</div>
+                                <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-top:2px;">🏷️ Kode Sasis: {insp_m.chassis_code or '-'}</div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -389,6 +401,7 @@ def render_master_catalog(db: Session):
                         st.markdown(f"""
                         **Informasi Arsitektur & Performa:**
                         - **Platfrom / Sumber Data:** `{insp_plat}`
+                        - **Kode Sasis / Part Number SKU:** `{insp_m.chassis_code or '-'}`
                         - **Kata Kunci Audit Lapangan:** `{insp_audit_kw}`
                         - **Verifikasi Website:** [🔍 Buka Pencarian di Website Langsung ↗]({insp_audit_url})
                         - **Prosesor:** {insp_m.processor_model} ({insp_m.processor_brand})
@@ -415,16 +428,17 @@ def render_master_catalog(db: Session):
 
                 | Sumber Platfrom | Kategori Hardware Utama | Format Kata Kunci Audit (*Exact Search Query*) | Endpoint Pencarian Live |
                 | :--- | :--- | :--- | :--- |
-                | **Pemmz.com** | Gaming & Workstation High-Performance (ASUS ROG/TUF, Lenovo Legion/LOQ, Acer Predator/Nitro, MSI, HP Omen/Victus, Alienware, Pongo) | `[Brand] [Model/Series] [GPU]` <br>*(Contoh: `Lenovo Legion Pro 5 RTX 4070`, `ASUS ROG Strix G16 RTX 4060`)* | `https://pemmz.com/catalogsearch/result/?q={keyword}` |
-                | **Tokopedia** | Business, Ultrabook, Mainstream & Productivity (ThinkPad, XPS, Zenbook, Swift, EliteBook, MateBook, Surface) | `[Brand] [Model] [CPU Tier]` <br>*(Contoh: `Lenovo ThinkPad T14 Gen 4 Core i5`, `Dell XPS 13 9320 Core i7`)* | `https://www.tokopedia.com/search?st=product&q={keyword}` |
-                | **iBox ID** | Apple MacBook Series (MacBook Pro & MacBook Air lini chip M1/M2/M3/M4 & Intel) | `[Model] [RAM]GB [Storage]GB` <br>*(Contoh: `MacBook Air 13 M2 8GB 256GB`, `MacBook Pro 14 M3 16GB 512GB`)* | `https://ibox.co.id/catalogsearch/result/?q={keyword}` |
+                | **Pemmz.com** | Gaming & Workstation High-Performance (ASUS ROG/TUF, Lenovo Legion/LOQ, Acer Predator/Nitro, MSI, HP Omen/Victus, Alienware, Pongo) | `[Brand] [Model] [Kode Sasis] [GPU]` <br>*(Contoh: `Lenovo Legion Pro 5 16IRX8 RTX 4070`, `ASUS ROG Strix G16 G614JV RTX 4060`)* | `https://pemmz.com/catalogsearch/result/?q={keyword}` |
+                | **Tokopedia** | Business, Ultrabook, Mainstream & Productivity (ThinkPad, XPS, Zenbook, Swift, EliteBook, MateBook, Surface) | `[Brand] [Model] [Kode Sasis] [CPU Tier]` <br>*(Contoh: `Lenovo ThinkPad T14 Gen 4 21HD Core i5`, `Dell XPS 13 9320 Core i7`)* | `https://www.tokopedia.com/search?st=product&q={keyword}` |
+                | **iBox ID** | Apple MacBook Series (MacBook Pro & MacBook Air lini chip M1/M2/M3/M4 & Intel) | `[Model] [Kode A-Series] [RAM]GB [Storage]GB` <br>*(Contoh: `MacBook Air 13 M2 A2681 8GB 256GB`, `MacBook Pro 14 M3 A2992 16GB 512GB`)* | `https://ibox.co.id/catalogsearch/result/?q={keyword}` |
                 | **Carousell ID** | Pasar Sekunder C2C Indonesia (4.036 listing aktif terindeks) | `[Model/Brand] [Keyword]` <br>*(Contoh: `ThinkPad T480 i5`, `MacBook Air M1`)* | `https://id.carousell.com/search/{keyword}` |
 
-                #### 🔍 Parameter yang Wajib Dicocokkan Saat Audit:
-                1. **Kesesuaian Spesifikasi Prosesor (CPU) & Grafis (GPU):** Pastikan model prosesor (misal `i7-13700H` / `Ryzen 7 7840HS`) dan varian GPU (misal `RTX 4060 8GB`) sesuai dengan lembar rilis resmi.
-                2. **Batas Daya Grafis (TGP Watt):** Pada laptop gaming di Pemmz.com, periksa apakah TGP grafis (misal 140W pada Legion Pro 5) tercantum pada kartu deskripsi produk.
-                3. **Fleksibilitas Memori (RAM SODIMM vs Soldered):** Periksa apakah tipe RAM di katalog (`Dual SODIMM` vs `Soldered LPDDR5X`) cocok dengan unit fisik.
-                4. **Tingkat Akurasi MSRP (Harga Baru):** Cocokkan harga MSRP resmi Indonesia pada tanggal rilis dengan harga acuan katalog toko resmi.
+                #### 🏷️ Rumus Singkat Membaca Kode Sasis / SKU Pabrikan (Cheat Sheet):
+                - **ASUS ROG/TUF:** Huruf paling belakang menentukan GPU: `JU` = RTX 4050, `JV` = RTX 4060, `JVR` = RTX 4060 (Refresh Gen 14), `JIR` = RTX 4070, `JZR` = RTX 4080.
+                - **Lenovo Legion:** Format `16IRX8` (`16` = 16", `I` = Intel, `R` = Raptor Lake, `X` = Discrete RTX, `8` = Gen 8).
+                - **Acer Predator/Nitro:** `PHN16-71` (Helios Neo 16 Gen 13), `AN515-58` (Nitro 5).
+                - **MSI Katana/Cyborg:** `B13VFK` (`13` = Gen 13, `V` = RTX 40, `E` = 4050, `F` = 4060, `G` = 4070, `H` = 4080).
+                - **Apple MacBook:** Model Number A-Series (`A2681` = Air 13 M2, `A2941` = Air 15 M2, `A2992` = Pro 14 M3 Pro, `A2337` = Air 13 M1).
                 """)
         else:
             st.info("Tidak ada model laptop yang cocok dengan kriteria filter.")
