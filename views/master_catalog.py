@@ -1,3 +1,5 @@
+import re
+import urllib.parse
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -111,6 +113,81 @@ def render_master_catalog(db: Session):
 
             return " & ".join(sources)
 
+        def generate_audit_search_keyword(brand_name, series_name, model_name, processor_model="", gpu_model="", vram_gb=0.0, ram=None, rom=None, platform=""):
+            """Menghasilkan kata kunci pencarian audit persis untuk dicocokkan 1-to-1 di website sumber."""
+            b_name = (brand_name or "").strip()
+            m_name = (model_name or "").strip()
+
+            if m_name.lower().startswith(b_name.lower()):
+                base_name = m_name
+            else:
+                base_name = f"{b_name} {m_name}".strip()
+
+            # Ekstraksi GPU singkat
+            gpu_clean = ""
+            if gpu_model and vram_gb and vram_gb > 0:
+                match_rtx = re.search(r'(RTX\s*\d{4}(?:\s*Ti)?|GTX\s*\d{4}(?:\s*Ti)?|Radeon\s*RX\s*\d{4}\w*)', gpu_model, re.IGNORECASE)
+                if match_rtx:
+                    gpu_clean = match_rtx.group(1).upper()
+                else:
+                    gpu_clean = gpu_model.replace("Laptop GPU", "").replace("NVIDIA GeForce", "").strip()
+
+            # Ekstraksi CPU tier singkat
+            cpu_clean = ""
+            if processor_model:
+                match_apple = re.search(r'(M[1234](?:\s*(?:Pro|Max|Ultra))?)', processor_model, re.IGNORECASE)
+                match_intel = re.search(r'(Core\s*Ultra\s*\d|Core\s*i[3579]|i[3579]-\d{4,5}\w*)', processor_model, re.IGNORECASE)
+                match_ryzen = re.search(r'(Ryzen\s*[3579]|Ryzen\s*AI\s*\d)', processor_model, re.IGNORECASE)
+                if match_apple:
+                    cpu_clean = match_apple.group(1)
+                elif match_intel:
+                    cpu_clean = match_intel.group(1)
+                elif match_ryzen:
+                    cpu_clean = match_ryzen.group(1)
+
+            plat_lower = platform.lower()
+
+            # 1. iBox ID / Apple
+            if "ibox" in plat_lower or b_name.lower() == "apple":
+                parts = [base_name]
+                if cpu_clean and cpu_clean.lower() not in base_name.lower():
+                    parts.append(cpu_clean)
+                if ram:
+                    parts.append(f"{ram}GB")
+                if rom:
+                    parts.append(f"{rom}GB")
+                return " ".join(parts).strip()
+
+            # 2. Pemmz.com / Gaming
+            if "pemmz" in plat_lower or (gpu_clean and any(k in plat_lower for k in ["gaming", "pemmz"])):
+                parts = [base_name]
+                if gpu_clean and gpu_clean.lower() not in base_name.lower():
+                    parts.append(gpu_clean)
+                elif cpu_clean and cpu_clean.lower() not in base_name.lower():
+                    parts.append(cpu_clean)
+                return " ".join(parts).strip()
+
+            # 3. Tokopedia / Carousell / Mainstream & Business
+            parts = [base_name]
+            if cpu_clean and cpu_clean.lower() not in base_name.lower():
+                parts.append(cpu_clean)
+            elif gpu_clean and gpu_clean.lower() not in base_name.lower():
+                parts.append(gpu_clean)
+            return " ".join(parts).strip()
+
+        def get_audit_search_url(platform_str, keyword):
+            """Menghasilkan tautan URL pencarian audit langsung ke website sumber live."""
+            encoded_kw = urllib.parse.quote_plus(keyword)
+            plat_lower = platform_str.lower()
+            if "pemmz" in plat_lower:
+                return f"https://pemmz.com/catalogsearch/result/?q={encoded_kw}"
+            elif "ibox" in plat_lower:
+                return f"https://ibox.co.id/catalogsearch/result/?q={encoded_kw}"
+            elif "carousell" in plat_lower:
+                return f"https://id.carousell.com/search/{encoded_kw}"
+            else:
+                return f"https://www.tokopedia.com/search?st=product&q={encoded_kw}"
+
         q = db.query(
             MasterModel,
             MasterBrand.name.label("brand_name"),
@@ -206,6 +283,8 @@ def render_master_catalog(db: Session):
                         img_url = m.image_url or get_product_image_url(b_name, m.series, m.name)
                         msrp_val = float(msrp) if msrp else 0
                         plat_val = get_model_platform(b_name, m.series, m.name, vid)
+                        audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val)
+                        audit_url = get_audit_search_url(plat_val, audit_kw)
                         with cols[col_idx]:
                             st.markdown(f"""
                             <div class="laptop-card-box">
@@ -218,8 +297,11 @@ def render_master_catalog(db: Session):
                                 <div class="laptop-card-content">
                                     <div class="laptop-card-title">{b_name} {m.name}</div>
                                     <div class="laptop-card-meta">{m.series or '-'}</div>
-                                    <div style="font-size:0.72rem; color:#38bdf8; font-weight:600; margin-bottom:4px;">
+                                    <div style="font-size:0.72rem; color:#38bdf8; font-weight:600; margin-bottom:2px;">
                                         🌐 Platfrom: {plat_val}
+                                    </div>
+                                    <div style="font-size:0.70rem; color:#a78bfa; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        🔍 Audit: <a href="{audit_url}" target="_blank" style="color:#c084fc; text-decoration:underline;">{audit_kw}</a>
                                     </div>
                                     <div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:6px;">
                                         ⚙️ {m.processor_model or '-'}<br>
@@ -241,12 +323,14 @@ def render_master_catalog(db: Session):
                 ram_up = "Dual SODIMM" if m.is_ram_upgradeable else "Soldered"
                 msrp_val = float(msrp) if msrp else 0
                 plat_val = get_model_platform(b_name, m.series, m.name, vid)
+                audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val)
 
                 table_data.append({
                     "Brand": b_name,
                     "Model": m.name,
                     "Series": m.series or "-",
                     "Platfrom": plat_val,
+                    "Kata Kunci Audit": audit_kw,
                     "Tahun": m.release_year,
                     "Prosesor (CPU)": m.processor_model or "-",
                     "Cinebench R23": f"{m.cinebench_score:,} pts" if m.cinebench_score else "-",
@@ -284,6 +368,11 @@ def render_master_catalog(db: Session):
                     insp_m, insp_b, _, _, _, insp_vid = insp_entry
                     insp_img = insp_m.image_url or get_product_image_url(insp_b, insp_m.series, insp_m.name)
                     insp_plat = get_model_platform(insp_b, insp_m.series, insp_m.name, insp_vid)
+                    insp_audit_kw = generate_audit_search_keyword(
+                        insp_b, insp_m.series, insp_m.name, insp_m.processor_model, insp_m.gpu_model, insp_m.vram_gb, None, None, insp_plat
+                    )
+                    insp_audit_url = get_audit_search_url(insp_plat, insp_audit_kw)
+
                     c_insp_img, c_insp1, c_insp2 = st.columns([1, 1.2, 1.2])
                     with c_insp_img:
                         st.markdown(f"""
@@ -300,6 +389,8 @@ def render_master_catalog(db: Session):
                         st.markdown(f"""
                         **Informasi Arsitektur & Performa:**
                         - **Platfrom / Sumber Data:** `{insp_plat}`
+                        - **Kata Kunci Audit Lapangan:** `{insp_audit_kw}`
+                        - **Verifikasi Website:** [🔍 Buka Pencarian di Website Langsung ↗]({insp_audit_url})
                         - **Prosesor:** {insp_m.processor_model} ({insp_m.processor_brand})
                         - **Arsitektur CPU:** {insp_m.cpu_architecture} ({insp_m.cpu_cores} Cores / {insp_m.cpu_threads} Threads)
                         - **Cinebench R23 Multi-Core:** {f"{insp_m.cinebench_score:,} pts" if insp_m.cinebench_score else "N/A"}
@@ -315,6 +406,26 @@ def render_master_catalog(db: Session):
                         - **Bobot & Material:** {insp_m.weight_kg} kg ({insp_m.chassis_material or '-'})
                         - **Sistem Operasi Rilis:** {insp_m.os_at_launch}
                         """)
+
+            # 6. Panduan Audit & Random Check Tim Lapangan
+            with st.expander("📋 Panduan Audit & Random Check Tim Lapangan (Kata Kunci Pencarian & URL Langsung)", expanded=False):
+                st.markdown("""
+                ### 🎯 Metodologi Audit 1-to-1 untuk Tim Lapangan
+                Untuk memastikan integritas data **100% data riil** tanpa data sintetis atau estimasi fiktif, tim lapangan dapat melakukan pengecekan acak (*random check*) menggunakan acuan kata kunci berikut:
+
+                | Sumber Platfrom | Kategori Hardware Utama | Format Kata Kunci Audit (*Exact Search Query*) | Endpoint Pencarian Live |
+                | :--- | :--- | :--- | :--- |
+                | **Pemmz.com** | Gaming & Workstation High-Performance (ASUS ROG/TUF, Lenovo Legion/LOQ, Acer Predator/Nitro, MSI, HP Omen/Victus, Alienware, Pongo) | `[Brand] [Model/Series] [GPU]` <br>*(Contoh: `Lenovo Legion Pro 5 RTX 4070`, `ASUS ROG Strix G16 RTX 4060`)* | `https://pemmz.com/catalogsearch/result/?q={keyword}` |
+                | **Tokopedia** | Business, Ultrabook, Mainstream & Productivity (ThinkPad, XPS, Zenbook, Swift, EliteBook, MateBook, Surface) | `[Brand] [Model] [CPU Tier]` <br>*(Contoh: `Lenovo ThinkPad T14 Gen 4 Core i5`, `Dell XPS 13 9320 Core i7`)* | `https://www.tokopedia.com/search?st=product&q={keyword}` |
+                | **iBox ID** | Apple MacBook Series (MacBook Pro & MacBook Air lini chip M1/M2/M3/M4 & Intel) | `[Model] [RAM]GB [Storage]GB` <br>*(Contoh: `MacBook Air 13 M2 8GB 256GB`, `MacBook Pro 14 M3 16GB 512GB`)* | `https://ibox.co.id/catalogsearch/result/?q={keyword}` |
+                | **Carousell ID** | Pasar Sekunder C2C Indonesia (4.036 listing aktif terindeks) | `[Model/Brand] [Keyword]` <br>*(Contoh: `ThinkPad T480 i5`, `MacBook Air M1`)* | `https://id.carousell.com/search/{keyword}` |
+
+                #### 🔍 Parameter yang Wajib Dicocokkan Saat Audit:
+                1. **Kesesuaian Spesifikasi Prosesor (CPU) & Grafis (GPU):** Pastikan model prosesor (misal `i7-13700H` / `Ryzen 7 7840HS`) dan varian GPU (misal `RTX 4060 8GB`) sesuai dengan lembar rilis resmi.
+                2. **Batas Daya Grafis (TGP Watt):** Pada laptop gaming di Pemmz.com, periksa apakah TGP grafis (misal 140W pada Legion Pro 5) tercantum pada kartu deskripsi produk.
+                3. **Fleksibilitas Memori (RAM SODIMM vs Soldered):** Periksa apakah tipe RAM di katalog (`Dual SODIMM` vs `Soldered LPDDR5X`) cocok dengan unit fisik.
+                4. **Tingkat Akurasi MSRP (Harga Baru):** Cocokkan harga MSRP resmi Indonesia pada tanggal rilis dengan harga acuan katalog toko resmi.
+                """)
         else:
             st.info("Tidak ada model laptop yang cocok dengan kriteria filter.")
     except Exception as e:
