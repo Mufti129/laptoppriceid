@@ -56,14 +56,26 @@ def render_master_catalog(db: Session):
         with f_col4:
             search_query = st.text_input("Pencarian Model / CPU / GPU:", placeholder="Contoh: RTX 4060, ThinkPad, M3, Core Ultra...")
 
-        f_col5, f_col6, f_col7 = st.columns([1.2, 1, 1])
+        # Query opsi generasi model berdasarkan brand yang dipilih
+        gen_query = db.query(MasterModel.generation).distinct()
+        if selected_cat_brand != "Semua Brand":
+            b_id = db.query(MasterBrand.id).filter(MasterBrand.name == selected_cat_brand).scalar()
+            if b_id:
+                gen_query = gen_query.filter(MasterModel.brand_id == b_id)
+        all_gens = sorted([g[0] for g in gen_query.all() if g[0]])
+        generation_options = ["Semua Generasi"] + all_gens
+
+        f_col5, f_col6, f_col7, f_col8 = st.columns([1.2, 1, 1, 1])
         with f_col5:
             year_range = st.slider("Rentang Tahun Rilis:", min_value=2010, max_value=2026, value=(2010, 2026))
 
         with f_col6:
-            gpu_filter = st.selectbox("Tipe Grafis (GPU):", ["Semua GPU", "Dedicated GPU (RTX / GTX / Radeon)", "Integrated iGPU (Iris / UHD)"])
+            selected_generation = st.selectbox("Filter Generasi Seri:", generation_options, index=0)
 
         with f_col7:
+            gpu_filter = st.selectbox("Tipe Grafis (GPU):", ["Semua GPU", "Dedicated GPU (RTX / GTX / Radeon)", "Integrated iGPU (Iris / UHD)"])
+
+        with f_col8:
             ram_filter = st.selectbox("Arsitektur RAM:", ["Semua RAM", "Dual SODIMM (Upgradeable)", "Soldered Onboard"])
 
         # 2. Build Query & Platform Resolution
@@ -226,13 +238,18 @@ def render_master_catalog(db: Session):
         elif ram_filter == "Soldered Onboard":
             q = q.filter(MasterModel.is_ram_upgradeable == False)
 
+        if selected_generation != "Semua Generasi":
+            q = q.filter(MasterModel.generation == selected_generation)
+
         if search_query:
             term = f"%{search_query.strip().lower()}%"
             q = q.filter(
                 MasterModel.name.ilike(term) |
                 MasterModel.processor_model.ilike(term) |
                 MasterModel.gpu_model.ilike(term) |
-                MasterModel.series.ilike(term)
+                MasterModel.series.ilike(term) |
+                MasterModel.chassis_code.ilike(term) |
+                MasterModel.generation.ilike(term)
             )
 
         records = q.order_by(MasterModel.release_year.desc(), MasterBrand.name, MasterModel.name).all()
@@ -307,8 +324,11 @@ def render_master_catalog(db: Session):
                                     <div style="font-size:0.72rem; color:#38bdf8; font-weight:600; margin-bottom:1px;">
                                         🌐 Platfrom: {plat_val}
                                     </div>
-                                    <div style="font-size:0.70rem; color:#10b981; font-weight:700; margin-bottom:2px;">
+                                    <div style="font-size:0.70rem; color:#10b981; font-weight:700; margin-bottom:1px;">
                                         🏷️ Sasis/SKU: <code>{m.chassis_code or '-'}</code>
+                                    </div>
+                                    <div style="font-size:0.70rem; color:#34d399; font-weight:600; margin-bottom:2px;">
+                                        🧬 Generasi: {m.generation or '-'}
                                     </div>
                                     <div style="font-size:0.70rem; color:#a78bfa; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                                         🔍 Audit: <a href="{audit_url}" target="_blank" style="color:#c084fc; text-decoration:underline;">{audit_kw}</a>
@@ -339,6 +359,7 @@ def render_master_catalog(db: Session):
                     "Brand": b_name,
                     "Model": m.name,
                     "Kode Sasis / SKU": m.chassis_code or "-",
+                    "Generasi": m.generation or "-",
                     "Series": m.series or "-",
                     "Platfrom": plat_val,
                     "Kata Kunci Audit": audit_kw,
@@ -394,6 +415,7 @@ def render_master_catalog(db: Session):
                                 <div style="color:#60a5fa; font-size:0.78rem; margin-top:2px;">{insp_m.series or '-'} ({insp_m.release_year})</div>
                                 <div style="color:#38bdf8; font-size:0.75rem; margin-top:4px;">🌐 Platfrom: {insp_plat}</div>
                                 <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-top:2px;">🏷️ Kode Sasis: {insp_m.chassis_code or '-'}</div>
+                                <div style="color:#34d399; font-size:0.75rem; font-weight:700; margin-top:2px;">🧬 Generasi: {insp_m.generation or '-'}</div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -402,6 +424,7 @@ def render_master_catalog(db: Session):
                         **Informasi Arsitektur & Performa:**
                         - **Platfrom / Sumber Data:** `{insp_plat}`
                         - **Kode Sasis / Part Number SKU:** `{insp_m.chassis_code or '-'}`
+                        - **Generasi Seri / Sasis:** `{insp_m.generation or '-'}`
                         - **Kata Kunci Audit Lapangan:** `{insp_audit_kw}`
                         - **Verifikasi Website:** [🔍 Buka Pencarian di Website Langsung ↗]({insp_audit_url})
                         - **Prosesor:** {insp_m.processor_model} ({insp_m.processor_brand})

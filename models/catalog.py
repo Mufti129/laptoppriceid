@@ -32,6 +32,7 @@ class MasterModel(Base):
     name = Column(String(100), nullable=False, index=True)              # e.g. ThinkPad X1 Carbon Gen 11, ROG Zephyrus G14, MacBook Pro 14 M3
     series = Column(String(50), nullable=True)                          # ThinkPad, Legion, ROG, TUF, ZenBook, XPS, MacBook Pro, Pongo
     chassis_code = Column(String(50), nullable=True, index=True)        # Kode Sasis / SKU Pabrikan: G614JV, 16IRX8, PHN16-71, A2681, 9320
+    generation = Column(String(50), nullable=True, index=True)          # Generasi Model / Seri: Gen 4, Gen 8, Gen 12, M2 Series, G10, R1
     release_year = Column(Integer, nullable=False, index=True)          # 2010 - 2026
     
     # 1. Hardware: Processor / CPU
