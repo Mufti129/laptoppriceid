@@ -21,6 +21,7 @@ from views import (
     render_spec_matrix,
     render_master_catalog,
     render_data_explorer,
+    render_tradein_calculator,
 )
 
 # ==============================================================================
@@ -405,6 +406,7 @@ st.sidebar.markdown("""
 MENU_SLUG_MAP = {
     "Market Overview & Dashboard": "overview",
     "FMV & Hedonic Calculator": "fmv",
+    "Kalkulator Trade-In & Buyback C2B": "tradein",
     "3-Tier Price Corridors & Quantiles": "corridors",
     "Arbitrage & Hot Deals Radar": "arbitrage",
     "Spec Matrix & Model Comparison": "compare",
@@ -437,7 +439,7 @@ st.sidebar.markdown("""
     • Master Model: <b>1.000 Unit (10 Brand)</b><br>
     • Snapshot Listing: <b>15.000 Terverifikasi</b><br>
     • Cakupan Wilayah: <b>13 Kota Indonesia</b><br>
-    • Engine: <b>Lancaster-Rosen Hedonic</b>
+    • Engine: <b>Lancaster-Rosen Hedonic & Buyback</b>
 </div>
 """, unsafe_allow_html=True)
 
@@ -449,6 +451,8 @@ with get_db() as db:
         render_market_overview(db)
     elif menu == "FMV & Hedonic Calculator":
         render_fmv_calculator(db)
+    elif menu == "Kalkulator Trade-In & Buyback C2B":
+        render_tradein_calculator(db)
     elif menu == "3-Tier Price Corridors & Quantiles":
         render_price_corridors(db)
     elif menu == "Arbitrage & Hot Deals Radar":
@@ -459,3 +463,4 @@ with get_db() as db:
         render_master_catalog(db)
     elif menu == "Data Explorer & Scam Filter":
         render_data_explorer(db)
+

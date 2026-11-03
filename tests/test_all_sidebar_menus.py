@@ -91,5 +91,48 @@ class TestAllSidebarMenus(unittest.TestCase):
         self.assertGreater(len(valid_items), 0)
         self.assertGreater(len(scam_items), 0)
 
+    def test_menu_8_tradein_calculator(self):
+        from analytics.buyback_engine import BuybackPricingEngine
+        # Test sample model/variant buyback
+        first_variant = self.db.query(MasterVariant).join(MasterModel).filter(MasterModel.brand_id.isnot(None)).first()
+        self.assertIsNotNone(first_variant)
+        
+        # 1. Normal condition
+        offer_normal = BuybackPricingEngine.calculate_buyback_offer(
+            base_fmv=10000000.0,
+            condition_state="NORMAL",
+            brand_name=first_variant.model.brand.name,
+            selected_defects=[],
+            completeness="Fullset (Dus + Charger Original)",
+            warranty_status="Garansi Resmi > 6 Bulan"
+        )
+        self.assertTrue(offer_normal["is_eligible"])
+        self.assertGreater(offer_normal["cash_offer_low"], 0)
+        self.assertGreaterEqual(offer_normal["trade_in_credit"], offer_normal["cash_offer_low"])
+
+        # 2. Defect condition
+        offer_defect = BuybackPricingEngine.calculate_buyback_offer(
+            base_fmv=10000000.0,
+            condition_state="NORMAL",
+            brand_name=first_variant.model.brand.name,
+            selected_defects=["lcd_lines", "battery_drop"],
+            completeness="Batangan (Unit Saja)",
+            warranty_status="Tidak Ada Garansi"
+        )
+        self.assertLess(offer_defect["cash_offer_low"], offer_normal["cash_offer_low"])
+
+        # 3. Mati Total condition
+        offer_dead = BuybackPricingEngine.calculate_buyback_offer(
+            base_fmv=10000000.0,
+            condition_state="MATI_TOTAL",
+            brand_name=first_variant.model.brand.name,
+            selected_defects=[],
+            completeness="Unit + Charger",
+            warranty_status="Tidak Ada Garansi"
+        )
+        self.assertEqual(offer_dead["condition_state"], "MATI_TOTAL")
+        self.assertTrue(offer_dead["is_eligible"])
+        self.assertIn("Kanibalan", offer_dead["deductions_breakdown"][0]["name"])
+
 if __name__ == "__main__":
     unittest.main()

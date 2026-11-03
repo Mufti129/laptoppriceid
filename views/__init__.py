@@ -5,13 +5,16 @@ from views.arbitrage_radar import render_arbitrage_radar
 from views.spec_matrix import render_spec_matrix
 from views.master_catalog import render_master_catalog
 from views.data_explorer import render_data_explorer
+from views.tradein_calculator import render_tradein_calculator
 
 __all__ = [
     "render_market_overview",
     "render_fmv_calculator",
+    "render_tradein_calculator",
     "render_price_corridors",
     "render_arbitrage_radar",
     "render_spec_matrix",
     "render_master_catalog",
     "render_data_explorer",
 ]
+
