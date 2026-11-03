@@ -1,6 +1,26 @@
 # LaptopPrice ID — Laptop Intelligence & Hedonic Valuation Platform
 
-Platform riset ekonometrik, intelligence pasar sekunder, dan kalkulator valuasi harga wajar laptop (*Fair Market Value*) pertama di Indonesia yang mengintegrasikan pemodelan hedonik kualitas, deteksi perangkap DP/kredit semu, dan scanner arbitrase otomatis.
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=Mufti129/laptoppriceid&branch=main&mainModule=streamlit_app.py)
+[![LaptopPrice ID CI](https://github.com/Mufti129/laptoppriceid/actions/workflows/ci.yml/badge.svg)](https://github.com/Mufti129/laptoppriceid/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+
+Platform riset ekonometrik, intelligence pasar sekunder, dan kalkulator valuasi harga wajar laptop (*Fair Market Value*) pertama di Indonesia yang mengintegrasikan pemodelan hedonik kualitas, deteksi perangkap DP/kredit semu, scanner arbitrase otomatis, serta kalkulator trade-in & buyback C2B.
+
+---
+
+## 🚀 Live Demo & 1-Click Cloud Deployment
+
+Aplikasi ini siap di-deploy secara instan dan 100% gratis ke **Streamlit Community Cloud**:
+
+👉 **[Klik Disini untuk Deploy 1-Klik ke Streamlit Cloud](https://share.streamlit.io/deploy?repository=Mufti129/laptoppriceid&branch=main&mainModule=streamlit_app.py)**
+
+| Konfigurasi | Nilai |
+|---|---|
+| **Repository** | `Mufti129/laptoppriceid` |
+| **Branch** | `main` |
+| **Main file path** | `streamlit_app.py` |
+| **Python Version** | `3.11` atau `3.12` |
 
 ---
 
@@ -21,23 +41,29 @@ Platform riset ekonometrik, intelligence pasar sekunder, dan kalkulator valuasi 
    - Penyesuaian nilai wajar berbasis bobot empiris kualitas fisik, engsel, kesehatan baterai, kelengkapan charger adaptor original vs OEM, dan garansi resmi.
    - Model penyusutan nilai multi-tier: *Apple Silicon*, *Business Enterprise*, *Gaming High-End*, dan *Consumer Mainstream*.
 
-4. **Arbitrage & Hot Deals Radar:**
+4. **Kalkulator Trade-In & Buyback C2B (`analytics/buyback_engine.py`):**
+   - **Katalog 15 Kerusakan Fisik Terstandarisasi:** Menghitung potongan biaya reparasi proporsional untuk Laptop Standar, Gaming Laptop, dan Apple MacBook.
+   - **Formula Mati Total (Salvage Value 12.5%):** Formula otomatis untuk unit kanibalan/rusak motherboard sesuai standar toko reparasi laptop profesional.
+   - **Valuasi 3-Dimensi:** Memberikan referensi Harga Pasar Bebas (C2C), Instant Cash Toko (C2B), dan Kredit Tukar Tambah (Trade-In).
+   - **Generator Reservasi WhatsApp:** Otomatis menghasilkan draft pesan WhatsApp resmi untuk booking inspeksi fisik di toko rekanan.
+
+5. **Arbitrage & Hot Deals Radar:**
    - Detektor otomatis listing laptop yang dijual di bawah nilai pasar wajar (*undervalued*) dengan kalkulasi potensi margin keuntungan reseller (Tier 1 Super Arbitrage $\ge 22\%$, Tier 2 High $15-21\%$, Tier 3 Moderate $12-14\%$).
 
-5. **Modular Executive Streamlit Web Dashboard (`views/`):**
+6. **Modular Executive Streamlit Web Dashboard (`views/`):**
    - Tampilan responsif dengan tema *Executive Dark Slate* yang nyaman dipandang.
-   - **Arsitektur Modular Per Tampilan:** Kode dashboard dipecah secara bersih ke dalam direktori `views/` (`market_overview.py`, `fmv_calculator.py`, `price_corridors.py`, `arbitrage_radar.py`, `spec_matrix.py`, `master_catalog.py`, `data_explorer.py`).
-   - **Sinkronisasi URL Query Params (`st.query_params`):** Setiap modul dapat diakses dan dibagikan secara instan melalui link URL langsung (misal `?menu=fmv`, `?menu=catalog`).
+   - **Arsitektur Modular Per Tampilan:** Kode dashboard dipecah secara bersih ke dalam direktori `views/` (`market_overview.py`, `fmv_calculator.py`, `tradein_calculator.py`, `price_corridors.py`, `arbitrage_radar.py`, `spec_matrix.py`, `master_catalog.py`, `data_explorer.py`).
+   - **Sinkronisasi URL Query Params (`st.query_params`):** Setiap modul dapat diakses dan dibagikan secara instan melalui link URL langsung (misal `?menu=fmv`, `?menu=tradein`, `?menu=catalog`).
    - Visualisasi gambar produk laptop beresolusi tinggi pada seluruh lini brand & model.
-   - 7 Modul Analisis Lengkap:
+   - 8 Modul Analisis Lengkap:
      - *Market Overview & Dashboard* (Statistik pasar makro & showcase featured flagships)
      - *FMV & Hedonic Calculator* (Kalkulator valuasi presisi tinggi + foto produk & spek pabrik)
+     - *Kalkulator Trade-In & Buyback C2B* (Wizard diagnosa kondisi fisik, 15 kerusakan, salvage & WhatsApp booking)
      - *3-Tier Price Corridors & Quantiles* (P25 bargain, median FMV, dan P75 pristine)
      - *Arbitrage & Hot Deals Radar* (Radar peluang beli murah + kartu deal visual interaktif)
      - *Spec Matrix & Model Comparison* (Komparasi berdampingan head-to-head lengkap dengan foto unit)
      - *Master Catalog Data* (Eksplorasi 1.000 Model Hardware, Galeri Visual Kartu, & Export CSV)
      - *Data Explorer & Scam Filter* (Audit listing pasar & filter perangkap DP)
-
 
 ---
 
