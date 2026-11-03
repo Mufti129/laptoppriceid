@@ -300,6 +300,51 @@ st.markdown("""
         border-radius: 50%;
     }
 
+    /* Specialized Sidebar Navigation Styling */
+    div[data-testid="stSidebar"] div[role="radiogroup"] {
+        gap: 6px;
+        display: flex;
+        flex-direction: column;
+        padding-top: 4px;
+    }
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label {
+        background: rgba(30, 41, 59, 0.40);
+        border: 1px solid rgba(51, 65, 85, 0.65);
+        border-radius: 9px;
+        padding: 9px 12px;
+        margin-bottom: 2px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {
+        background: rgba(59, 130, 246, 0.14);
+        border-color: rgba(59, 130, 246, 0.5);
+        transform: translateX(3px);
+    }
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child {
+        display: none !important;
+    }
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label div[data-testid="stMarkdownContainer"] p {
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        color: #cbd5e1 !important;
+        margin: 0 !important;
+        line-height: 1.35 !important;
+    }
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"],
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:has(input:checked) {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.25) 0%, rgba(30, 41, 59, 0.9) 100%) !important;
+        border-left: 4px solid #38bdf8 !important;
+        border-color: #38bdf8 !important;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25) !important;
+    }
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:has(input:checked) div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+
     /* Product Images & Cards */
     .laptop-img-hero {
         width: 100%;
@@ -394,11 +439,14 @@ def get_db():
 # ==============================================================================
 st.sidebar.markdown("""
 <div class="sidebar-brand-box">
-    <div class="sidebar-title">LaptopPrice ID</div>
-    <div class="sidebar-desc">Laptop Market Intelligence & Hedonic Valuation Platform</div>
+    <div style="display:flex; align-items:center; gap:9px;">
+        <span style="font-size:1.45rem;">💻</span>
+        <div class="sidebar-title">LaptopPrice ID</div>
+    </div>
+    <div class="sidebar-desc">Market Intelligence & Buyback Valuation Platform</div>
     <div class="status-pill">
         <span class="status-dot"></span>
-        Enterprise Active
+        Enterprise Active v2.4
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -416,30 +464,73 @@ MENU_SLUG_MAP = {
 SLUG_MENU_MAP = {v: k for k, v in MENU_SLUG_MAP.items()}
 menu_options = list(MENU_SLUG_MAP.keys())
 
+MENU_DISPLAY_MAP = {
+    "Market Overview & Dashboard": "📊 Market Overview & Index",
+    "FMV & Hedonic Calculator": "🎯 FMV & Hedonic Valuation",
+    "Kalkulator Trade-In & Buyback C2B": "🔄 Trade-In & Buyback C2B ✨",
+    "3-Tier Price Corridors & Quantiles": "📈 3-Tier Price Corridors",
+    "Arbitrage & Hot Deals Radar": "⚡ Arbitrage & Deals Radar",
+    "Spec Matrix & Model Comparison": "⚖️ Spec Matrix Comparison",
+    "Master Catalog Data": "📚 Master Catalog (1.000 SKU)",
+    "Data Explorer & Scam Filter": "🛡️ Data Explorer & Anti-Scam"
+}
+
 # Read URL query params for direct sharing
 default_index = 0
 current_slug = st.query_params.get("menu")
 if current_slug and current_slug in SLUG_MENU_MAP:
     default_index = menu_options.index(SLUG_MENU_MAP[current_slug])
 
+st.sidebar.markdown("""
+<div style="font-size:0.70rem; font-weight:800; color:#64748b; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px;">
+    NAVIGASI MODUL UTAMA
+</div>
+""", unsafe_allow_html=True)
+
 menu = st.sidebar.radio(
     "PILIH MODUL ANALISIS:",
     menu_options,
-    index=default_index
+    index=default_index,
+    format_func=lambda x: MENU_DISPLAY_MAP.get(x, x),
+    label_visibility="collapsed"
 )
 
 # Keep URL parameter synchronized
 st.query_params["menu"] = MENU_SLUG_MAP[menu]
 
 st.sidebar.markdown("---")
+
+# Quick Action Hotline Card
 st.sidebar.markdown("""
-<div style="font-size:0.75rem; color:#64748b; line-height:1.6;">
+<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.7)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;">
+    <div style="font-size:0.75rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.04em;">
+        💬 KONSULTASI TRADE-IN C2B
+    </div>
+    <div style="font-size:0.74rem; color:#94a3b8; margin-top:4px; line-height:1.4;">
+        Punya laptop bekas, minus, atau mati total? Konsultasikan harga taksiran instan ke toko.
+    </div>
+    <a href="https://wa.me/6281234567890?text=Halo%20Admin%20LaptopPrice%20ID,%20saya%20ingin%20konsultasi%20jual/tukar%20tambah%20laptop%20saya" target="_blank" style="display:inline-block; margin-top:8px; background:#10b981; color:#ffffff; font-size:0.74rem; font-weight:700; padding:5px 12px; border-radius:6px; text-decoration:none;">
+        Chat WhatsApp Toko &rarr;
+    </a>
+</div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("""
+<div style="font-size:0.74rem; color:#64748b; line-height:1.6;">
     <b>STATUS SISTEM:</b><br>
-    • Database: <span style="color:#34d399;">🟢 Online (SQLite)</span><br>
+    • Database: <span style="color:#34d399;">🟢 Online (SQLite 4.8MB)</span><br>
     • Master Model: <b>1.000 Unit (10 Brand)</b><br>
     • Snapshot Listing: <b>15.000 Terverifikasi</b><br>
     • Cakupan Wilayah: <b>13 Kota Indonesia</b><br>
-    • Engine: <b>Lancaster-Rosen Hedonic & Buyback</b>
+    • Engine: <b>Lancaster-Rosen & Buyback</b>
+</div>
+<div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
+    <a href="https://github.com/Mufti129/laptoppriceid" target="_blank" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.68rem; padding:3px 8px; border-radius:4px; text-decoration:none;">
+        🐙 GitHub Repo
+    </a>
+    <a href="https://share.streamlit.io/deploy?repository=Mufti129/laptoppriceid&branch=main&mainModule=streamlit_app.py" target="_blank" style="background:#3b82f6; color:#ffffff; font-size:0.68rem; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:600;">
+        ☁️ Deploy Cloud
+    </a>
 </div>
 """, unsafe_allow_html=True)
 
