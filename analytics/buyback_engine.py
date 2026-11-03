@@ -186,9 +186,20 @@ class BuybackPricingEngine:
         warranty_status: str = "Tidak Ada Garansi",
         brand_name: str = "",
         is_gaming: bool = False,
-        release_year: int = 2022
+        release_year: int = 2022,
+        physical_grade: str = "Grade B",
+        battery_condition: str = "Normal",
+        screen_condition: str = "Normal",
+        keyboard_condition: str = "Normal",
+        bios_security: str = "Bebas",
+        ram_gb: Optional[int] = None,
+        storage_gb: Optional[int] = None,
+        storage_type: str = "SSD",
+        base_ram_gb: int = 8,
+        base_storage_gb: int = 512,
+        **kwargs
     ) -> Dict[str, Any]:
-        selected_defects = selected_defects or []
+        selected_defects = list(selected_defects or [])
         b_upper = (brand_name or "").upper()
         is_apple = "APPLE" in b_upper
 
@@ -199,8 +210,58 @@ class BuybackPricingEngine:
         else:
             margin_rate = 0.25
 
+        # Incorporate component grade inputs into defect list if not already present
+        if "Grade C" in physical_grade and "casing_dent" not in selected_defects:
+            selected_defects.append("casing_dent")
+        elif "Grade D" in physical_grade:
+            if "casing_dent" not in selected_defects:
+                selected_defects.append("casing_dent")
+            if "hinge_broken" not in selected_defects:
+                selected_defects.append("hinge_broken")
+
+        if any(w in battery_condition for w in ["Drop", "<30", "<45"]) and "battery_drop" not in selected_defects:
+            selected_defects.append("battery_drop")
+        elif "Kembung" in battery_condition and "battery_swollen" not in selected_defects:
+            selected_defects.append("battery_swollen")
+
+        if "White Spot" in screen_condition and "white_spot" not in selected_defects:
+            selected_defects.append("white_spot")
+        elif any(w in screen_condition for w in ["Garis", "Flicker"]) and "lcd_lines" not in selected_defects:
+            selected_defects.append("lcd_lines")
+        elif any(w in screen_condition for w in ["Pecah", "Retak", "Blank", "Tompel"]) and "lcd_broken" not in selected_defects:
+            selected_defects.append("lcd_broken")
+
+        if "Tombol" in keyboard_condition and "keyboard_faulty" not in selected_defects:
+            selected_defects.append("keyboard_faulty")
+        elif "Touchpad" in keyboard_condition and "touchpad_broken" not in selected_defects:
+            selected_defects.append("touchpad_broken")
+        elif "Keduanya" in keyboard_condition:
+            if "keyboard_faulty" not in selected_defects:
+                selected_defects.append("keyboard_faulty")
+            if "touchpad_broken" not in selected_defects:
+                selected_defects.append("touchpad_broken")
+
+        if "HDD" in storage_type and "storage_hdd" not in selected_defects:
+            selected_defects.append("storage_hdd")
+
+        # Hardware spec adjustments (RAM / Storage capacity adjustments vs baseline)
+        hw_adj = 0
+        if ram_gb is not None:
+            if ram_gb > base_ram_gb:
+                hw_adj += min(1200000, ((ram_gb - base_ram_gb) // 8) * (300000 if is_gaming else 200000))
+            elif ram_gb < base_ram_gb:
+                hw_adj -= min(400000, ((base_ram_gb - ram_gb) // 4) * 150000)
+
+        if storage_gb is not None:
+            if storage_gb > base_storage_gb:
+                hw_adj += min(1500000, ((storage_gb - base_storage_gb) // 512) * 350000)
+            elif storage_gb < base_storage_gb:
+                hw_adj -= min(400000, ((base_storage_gb - storage_gb) // 256) * 150000)
+
+        adjusted_base_fmv = max(cls.MINIMUM_BUYBACK_FLOOR * 2, base_fmv + hw_adj)
+
         if condition_state.upper() == "MATI_TOTAL":
-            salvage_raw = base_fmv * cls.SALVAGE_RATE
+            salvage_raw = adjusted_base_fmv * cls.SALVAGE_RATE
             range_step = 500000 if is_gaming or is_apple else 250000
             cash_offer_low = max(cls.MINIMUM_BUYBACK_FLOOR, round(salvage_raw / 50000) * 50000)
             cash_offer_high = cash_offer_low + range_step
@@ -210,7 +271,7 @@ class BuybackPricingEngine:
 
             return {
                 "condition_state": "MATI_TOTAL",
-                "base_fmv": round(base_fmv),
+                "base_fmv": round(adjusted_base_fmv),
                 "is_eligible": is_eligible,
                 "ineligibility_reason": None if is_eligible else "Laptop mati total dengan nilai sisa komponen di bawah ambang batas komersial.",
                 "retail_c2c_price": round(salvage_raw * 1.3),
@@ -219,10 +280,11 @@ class BuybackPricingEngine:
                 "cash_offer_mid": (cash_offer_low + cash_offer_high) // 2,
                 "trade_in_credit": trade_in_val,
                 "total_deductions": 0,
-                "deductions_breakdown": [{"name": "Salvage Value (Komponen Kanibalan Motherboard Mati)", "cost": round(base_fmv * (1 - cls.SALVAGE_RATE))}],
+                "deductions_breakdown": [{"name": "Salvage Value (Komponen Kanibalan Motherboard Mati)", "cost": round(adjusted_base_fmv * (1 - cls.SALVAGE_RATE))}],
                 "margin_rate_pct": 0,
                 "warranty_bonus": 0,
-                "completeness_bonus": 0
+                "completeness_bonus": 0,
+                "hw_spec_adj": hw_adj
             }
 
         deductions_breakdown = []
@@ -234,25 +296,35 @@ class BuybackPricingEngine:
             deductions_breakdown.append({"key": d_key, "name": label, "cost": cost, "category": item_info.get("category", "Umum")})
             total_defect_cost += cost
 
+        if "Terkunci" in bios_security:
+            bios_cost = 400000 if not is_apple else 800000
+            deductions_breakdown.append({"key": "bios_locked", "name": "Penalti Kunci BIOS / MDM (Biaya Unlock Servis)", "cost": bios_cost, "category": "Keamanan"})
+            total_defect_cost += bios_cost
+
         warranty_bonus = 0
         if "Garansi Resmi > 6 Bulan" in warranty_status:
-            warranty_bonus = round(base_fmv * 0.05)
+            warranty_bonus = round(adjusted_base_fmv * 0.05)
         elif "Garansi Resmi < 6 Bulan" in warranty_status:
-            warranty_bonus = round(base_fmv * 0.025)
+            warranty_bonus = round(adjusted_base_fmv * 0.025)
 
         completeness_adj = 0
         if "Fullset" in completeness:
-            completeness_adj = round(base_fmv * 0.03)
+            completeness_adj = round(adjusted_base_fmv * 0.03)
         elif "Batangan" in completeness:
             if "charger_missing" not in selected_defects and "charger_kw" not in selected_defects:
                 charger_cost = cls.get_defect_deduction("charger_missing", brand_name=brand_name, is_gaming=is_gaming)
                 deductions_breakdown.append({"key": "charger_missing", "name": "Penalti Unit Batangan (Tanpa Charger)", "cost": charger_cost, "category": "Aksesoris"})
                 total_defect_cost += charger_cost
 
-        retail_c2c = max(cls.MINIMUM_BUYBACK_FLOOR, base_fmv - total_defect_cost + warranty_bonus + completeness_adj)
+        physical_grade_bonus = round(adjusted_base_fmv * 0.03) if "Grade A" in physical_grade else 0
+        battery_bonus = 150000 if "Sangat Sehat" in battery_condition else 0
 
-        store_margin_amount = base_fmv * margin_rate
-        net_cash_base = base_fmv - store_margin_amount - total_defect_cost + warranty_bonus + completeness_adj
+        total_bonuses = warranty_bonus + completeness_adj + physical_grade_bonus + battery_bonus
+
+        retail_c2c = max(cls.MINIMUM_BUYBACK_FLOOR, adjusted_base_fmv - total_defect_cost + total_bonuses)
+
+        store_margin_amount = adjusted_base_fmv * margin_rate
+        net_cash_base = adjusted_base_fmv - store_margin_amount - total_defect_cost + total_bonuses
 
         is_eligible = net_cash_base >= cls.MINIMUM_BUYBACK_FLOOR
 
@@ -264,7 +336,7 @@ class BuybackPricingEngine:
 
         return {
             "condition_state": "NORMAL",
-            "base_fmv": round(base_fmv),
+            "base_fmv": round(adjusted_base_fmv),
             "is_eligible": is_eligible,
             "ineligibility_reason": None if is_eligible else "Akumulasi kerusakan melebihi nilai pasar laptop sehingga tidak ekonomis untuk dibeli komersial.",
             "retail_c2c_price": round(retail_c2c),
@@ -276,5 +348,8 @@ class BuybackPricingEngine:
             "deductions_breakdown": deductions_breakdown,
             "margin_rate_pct": int(margin_rate * 100),
             "warranty_bonus": warranty_bonus,
-            "completeness_bonus": completeness_adj
+            "completeness_bonus": completeness_adj,
+            "physical_grade_bonus": physical_grade_bonus,
+            "battery_bonus": battery_bonus,
+            "hw_spec_adj": hw_adj
         }
