@@ -34,7 +34,7 @@ def render_arbitrage_radar(db: Session):
             """, unsafe_allow_html=True)
 
             # Top 3 Visual Deal Cards
-            st.markdown("#### 🔥 Rekomendasi Hot Deals Pilihan")
+            st.markdown("#### Rekomendasi Hot Deals Pilihan")
             c_deal_cards = st.columns(min(3, len(deals)))
             for idx, col in enumerate(c_deal_cards):
                 deal = deals[idx]

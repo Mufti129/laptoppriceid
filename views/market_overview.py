@@ -49,7 +49,7 @@ def render_market_overview(db: Session):
         st.markdown(f"""
         <div style="background:linear-gradient(90deg, rgba(6,78,59,0.85), rgba(15,23,42,0.9)); border:1px solid #10b981; border-radius:10px; padding:12px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <div>
-                <span style="font-weight:700; color:#ecfdf5; font-size:0.95rem;">🛡️ Status Integritas & Asal Usul Data:</span>
+                <span style="font-weight:700; color:#ecfdf5; font-size:0.95rem;">Status Integritas & Asal Usul Data:</span>
                 <span style="color:#a7f3d0; font-size:0.88rem; margin-left:8px;"><b>{real_listings:,} Posting Riil Terverifikasi ({pct_real:.1f}%)</b> • <b>{synthetic_listings} Data Sintetis/Dummy</b></span>
             </div>
             <div style="background:#059669; color:#ffffff; font-size:0.75rem; font-weight:800; padding:4px 12px; border-radius:6px; letter-spacing:0.5px;">
@@ -81,13 +81,13 @@ def render_market_overview(db: Session):
         </div>
         <div style="display:flex; gap:12px; margin-top:14px; margin-bottom:20px; flex-wrap:wrap;">
             <div style="background:#1e293b; border:1px solid #334155; padding:8px 14px; border-radius:8px; font-size:0.85rem; color:#94a3b8;">
-                🟢 <b>Carousell ID (C2C):</b> <span style="color:#f8fafc; font-weight:600;">{c_carousell:,} listing aktif</span>
+                <b>Carousell ID (C2C):</b> <span style="color:#f8fafc; font-weight:600;">{c_carousell:,} listing aktif</span>
             </div>
             <div style="background:#1e293b; border:1px solid #334155; padding:8px 14px; border-radius:8px; font-size:0.85rem; color:#94a3b8;">
-                ℹ️ <b>Tokopedia (Verified Stores):</b> <span style="color:#f8fafc; font-weight:600;">{c_tokopedia:,} listing</span>
+                <b>Tokopedia (Verified Stores):</b> <span style="color:#f8fafc; font-weight:600;">{c_tokopedia:,} listing</span>
             </div>
             <div style="background:#1e293b; border:1px solid #334155; padding:8px 14px; border-radius:8px; font-size:0.85rem; color:#94a3b8;">
-                ℹ️ <b>Shopee (Ex-Office Import):</b> <span style="color:#f8fafc; font-weight:600;">{c_shopee:,} listing</span>
+                <b>Shopee (Ex-Office Import):</b> <span style="color:#f8fafc; font-weight:600;">{c_shopee:,} listing</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -193,8 +193,8 @@ def render_market_overview(db: Session):
                         <div class="laptop-card-title">{b_name} {m_name}</div>
                         <div class="laptop-card-meta">{s_name}</div>
                         <div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:8px;">
-                            ⚙️ {cpu}<br>
-                            🎮 {gpu}
+                            CPU: {cpu}<br>
+                            GPU: {gpu}
                         </div>
                         <div style="border-top:1px solid #334155; padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-size:0.72rem; color:#94a3b8;">MSRP Baru</span>

@@ -322,20 +322,20 @@ def render_master_catalog(db: Session):
                                     <div class="laptop-card-title">{b_name} {m.name}</div>
                                     <div class="laptop-card-meta">{m.series or '-'}</div>
                                     <div style="font-size:0.72rem; color:#38bdf8; font-weight:600; margin-bottom:1px;">
-                                        🌐 Platfrom: {plat_val}
+                                        Platform: {plat_val}
                                     </div>
                                     <div style="font-size:0.70rem; color:#10b981; font-weight:700; margin-bottom:1px;">
-                                        🏷️ Sasis/SKU: <code>{m.chassis_code or '-'}</code>
+                                        Sasis/SKU: <code>{m.chassis_code or '-'}</code>
                                     </div>
                                     <div style="font-size:0.70rem; color:#34d399; font-weight:600; margin-bottom:2px;">
-                                        🧬 Generasi: {m.generation or '-'}
+                                        Generasi: {m.generation or '-'}
                                     </div>
                                     <div style="font-size:0.70rem; color:#a78bfa; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                        🔍 Audit: <a href="{audit_url}" target="_blank" style="color:#c084fc; text-decoration:underline;">{audit_kw}</a>
+                                        Audit: <a href="{audit_url}" target="_blank" style="color:#c084fc; text-decoration:underline;">{audit_kw}</a>
                                     </div>
                                     <div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:6px;">
-                                        ⚙️ {m.processor_model or '-'}<br>
-                                        🎮 {m.gpu_model or 'iGPU'}
+                                        CPU: {m.processor_model or '-'}<br>
+                                        GPU: {m.gpu_model or 'iGPU'}
                                     </div>
                                     <div style="border-top:1px solid #334155; padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
                                         <span style="font-size:0.72rem; color:#94a3b8;">{ram or '-'}GB / {rom or '-'}GB</span>
@@ -413,9 +413,9 @@ def render_master_catalog(db: Session):
                             <div style="padding:10px 12px; background:#1e293b; border-top:1px solid #334155;">
                                 <div style="font-weight:800; color:#f8fafc; font-size:0.95rem;">{insp_m.name}</div>
                                 <div style="color:#60a5fa; font-size:0.78rem; margin-top:2px;">{insp_m.series or '-'} ({insp_m.release_year})</div>
-                                <div style="color:#38bdf8; font-size:0.75rem; margin-top:4px;">🌐 Platfrom: {insp_plat}</div>
-                                <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-top:2px;">🏷️ Kode Sasis: {insp_m.chassis_code or '-'}</div>
-                                <div style="color:#34d399; font-size:0.75rem; font-weight:700; margin-top:2px;">🧬 Generasi: {insp_m.generation or '-'}</div>
+                                <div style="color:#38bdf8; font-size:0.75rem; margin-top:4px;">Platform: {insp_plat}</div>
+                                <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-top:2px;">Kode Sasis: {insp_m.chassis_code or '-'}</div>
+                                <div style="color:#34d399; font-size:0.75rem; font-weight:700; margin-top:2px;">Generasi: {insp_m.generation or '-'}</div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -426,7 +426,7 @@ def render_master_catalog(db: Session):
                         - **Kode Sasis / Part Number SKU:** `{insp_m.chassis_code or '-'}`
                         - **Generasi Seri / Sasis:** `{insp_m.generation or '-'}`
                         - **Kata Kunci Audit Lapangan:** `{insp_audit_kw}`
-                        - **Verifikasi Website:** [🔍 Buka Pencarian di Website Langsung ↗]({insp_audit_url})
+                        - **Verifikasi Website:** [Buka Pencarian di Website Langsung]({insp_audit_url})
                         - **Prosesor:** {insp_m.processor_model} ({insp_m.processor_brand})
                         - **Arsitektur CPU:** {insp_m.cpu_architecture} ({insp_m.cpu_cores} Cores / {insp_m.cpu_threads} Threads)
                         - **Cinebench R23 Multi-Core:** {f"{insp_m.cinebench_score:,} pts" if insp_m.cinebench_score else "N/A"}
@@ -444,9 +444,9 @@ def render_master_catalog(db: Session):
                         """)
 
             # 6. Panduan Audit & Random Check Tim Lapangan
-            with st.expander("📋 Panduan Audit & Random Check Tim Lapangan (Kata Kunci Pencarian & URL Langsung)", expanded=False):
+            with st.expander("Panduan Audit & Random Check Tim Lapangan (Kata Kunci Pencarian & URL Langsung)", expanded=False):
                 st.markdown("""
-                ### 🎯 Metodologi Audit 1-to-1 untuk Tim Lapangan
+                ### Metodologi Audit 1-to-1 untuk Tim Lapangan
                 Untuk memastikan integritas data **100% data riil** tanpa data sintetis atau estimasi fiktif, tim lapangan dapat melakukan pengecekan acak (*random check*) menggunakan acuan kata kunci berikut:
 
                 | Sumber Platfrom | Kategori Hardware Utama | Format Kata Kunci Audit (*Exact Search Query*) | Endpoint Pencarian Live |
@@ -456,7 +456,7 @@ def render_master_catalog(db: Session):
                 | **iBox ID** | Apple MacBook Series (MacBook Pro & MacBook Air lini chip M1/M2/M3/M4 & Intel) | `[Model] [Kode A-Series] [RAM]GB [Storage]GB` <br>*(Contoh: `MacBook Air 13 M2 A2681 8GB 256GB`, `MacBook Pro 14 M3 A2992 16GB 512GB`)* | `https://ibox.co.id/catalogsearch/result/?q={keyword}` |
                 | **Carousell ID** | Pasar Sekunder C2C Indonesia (4.036 listing aktif terindeks) | `[Model/Brand] [Keyword]` <br>*(Contoh: `ThinkPad T480 i5`, `MacBook Air M1`)* | `https://id.carousell.com/search/{keyword}` |
 
-                #### 🏷️ Rumus Singkat Membaca Kode Sasis / SKU Pabrikan (Cheat Sheet):
+                #### Rumus Singkat Membaca Kode Sasis / SKU Pabrikan (Cheat Sheet):
                 - **ASUS ROG/TUF:** Huruf paling belakang menentukan GPU: `JU` = RTX 4050, `JV` = RTX 4060, `JVR` = RTX 4060 (Refresh Gen 14), `JIR` = RTX 4070, `JZR` = RTX 4080.
                 - **Lenovo Legion:** Format `16IRX8` (`16` = 16", `I` = Intel, `R` = Raptor Lake, `X` = Discrete RTX, `8` = Gen 8).
                 - **Acer Predator/Nitro:** `PHN16-71` (Helios Neo 16 Gen 13), `AN515-58` (Nitro 5).

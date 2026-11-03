@@ -439,10 +439,7 @@ def get_db():
 # ==============================================================================
 st.sidebar.markdown("""
 <div class="sidebar-brand-box">
-    <div style="display:flex; align-items:center; gap:9px;">
-        <span style="font-size:1.45rem;">💻</span>
-        <div class="sidebar-title">LaptopPrice ID</div>
-    </div>
+    <div class="sidebar-title">LaptopPrice ID</div>
     <div class="sidebar-desc">Market Intelligence & Buyback Valuation Platform</div>
     <div class="status-pill">
         <span class="status-dot"></span>
@@ -465,14 +462,14 @@ SLUG_MENU_MAP = {v: k for k, v in MENU_SLUG_MAP.items()}
 menu_options = list(MENU_SLUG_MAP.keys())
 
 MENU_DISPLAY_MAP = {
-    "Market Overview & Dashboard": "📊 Market Overview & Index",
-    "FMV & Hedonic Calculator": "🎯 FMV & Hedonic Valuation",
-    "Kalkulator Trade-In & Buyback C2B": "🔄 Trade-In & Buyback C2B ✨",
-    "3-Tier Price Corridors & Quantiles": "📈 3-Tier Price Corridors",
-    "Arbitrage & Hot Deals Radar": "⚡ Arbitrage & Deals Radar",
-    "Spec Matrix & Model Comparison": "⚖️ Spec Matrix Comparison",
-    "Master Catalog Data": "📚 Master Catalog (1.000 SKU)",
-    "Data Explorer & Scam Filter": "🛡️ Data Explorer & Anti-Scam"
+    "Market Overview & Dashboard": "Market Overview & Index",
+    "FMV & Hedonic Calculator": "FMV & Hedonic Valuation",
+    "Kalkulator Trade-In & Buyback C2B": "Kalkulator Trade-In & Buyback C2B",
+    "3-Tier Price Corridors & Quantiles": "3-Tier Price Corridors",
+    "Arbitrage & Hot Deals Radar": "Arbitrage & Deals Radar",
+    "Spec Matrix & Model Comparison": "Spec Matrix Comparison",
+    "Master Catalog Data": "Master Catalog (1.000 SKU)",
+    "Data Explorer & Scam Filter": "Data Explorer & Anti-Scam"
 }
 
 # Read URL query params for direct sharing
@@ -504,13 +501,13 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.7)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;">
     <div style="font-size:0.75rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.04em;">
-        💬 KONSULTASI TRADE-IN C2B
+        KONSULTASI TRADE-IN C2B
     </div>
     <div style="font-size:0.74rem; color:#94a3b8; margin-top:4px; line-height:1.4;">
         Punya laptop bekas, minus, atau mati total? Konsultasikan harga taksiran instan ke toko.
     </div>
     <a href="https://wa.me/6281234567890?text=Halo%20Admin%20LaptopPrice%20ID,%20saya%20ingin%20konsultasi%20jual/tukar%20tambah%20laptop%20saya" target="_blank" style="display:inline-block; margin-top:8px; background:#10b981; color:#ffffff; font-size:0.74rem; font-weight:700; padding:5px 12px; border-radius:6px; text-decoration:none;">
-        Chat WhatsApp Toko &rarr;
+        Chat WhatsApp Toko
     </a>
 </div>
 """, unsafe_allow_html=True)
@@ -518,7 +515,7 @@ st.sidebar.markdown("""
 st.sidebar.markdown("""
 <div style="font-size:0.74rem; color:#64748b; line-height:1.6;">
     <b>STATUS SISTEM:</b><br>
-    • Database: <span style="color:#34d399;">🟢 Online (SQLite 4.8MB)</span><br>
+    • Database: <span style="color:#34d399;">Online (SQLite)</span><br>
     • Master Model: <b>1.000 Unit (10 Brand)</b><br>
     • Snapshot Listing: <b>15.000 Terverifikasi</b><br>
     • Cakupan Wilayah: <b>13 Kota Indonesia</b><br>
@@ -526,10 +523,10 @@ st.sidebar.markdown("""
 </div>
 <div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
     <a href="https://github.com/Mufti129/laptoppriceid" target="_blank" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; font-size:0.68rem; padding:3px 8px; border-radius:4px; text-decoration:none;">
-        🐙 GitHub Repo
+        GitHub Repository
     </a>
     <a href="https://share.streamlit.io/deploy?repository=Mufti129/laptoppriceid&branch=main&mainModule=streamlit_app.py" target="_blank" style="background:#3b82f6; color:#ffffff; font-size:0.68rem; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:600;">
-        ☁️ Deploy Cloud
+        Deploy Cloud
     </a>
 </div>
 """, unsafe_allow_html=True)

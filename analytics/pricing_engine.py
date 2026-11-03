@@ -84,6 +84,7 @@ class LaptopPricingEngine:
                 "price_min": float(min(filtered_prices)),
                 "price_p25": float(percentile(filtered_prices, 25)),
                 "price_median": float(median(filtered_prices)),
+                "fmv": float(median(filtered_prices)),
                 "price_p75": float(percentile(filtered_prices, 75)),
                 "price_max": float(max(filtered_prices)),
                 "calculated_at": now
@@ -124,6 +125,13 @@ class LaptopPricingEngine:
         """Alias untuk sinkronisasi tabel statistik harga pasar."""
         return self.sync_market_price_stats_table()
 
+    def get_variant_price_stats(
+        self,
+        variant_id: int,
+        city: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Alias untuk calculate_variant_pricing_stats."""
+        return self.calculate_variant_pricing_stats(variant_id=variant_id, city=city)
 
     def calculate_variant_pricing_stats(
         self,

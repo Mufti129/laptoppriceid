@@ -58,8 +58,8 @@ def render_tradein_calculator(db: Session):
             return
 
         pricing_engine = LaptopPricingEngine(db)
-        stats = pricing_engine.get_variant_price_stats(selected_var.id)
-        base_fmv = stats["fmv"] if (stats and stats.get("fmv", 0) > 0) else (float(selected_var.official_msrp_new or 10000000) * 0.55)
+        stats = pricing_engine.calculate_variant_pricing_stats(selected_var.id)
+        base_fmv = stats["price_median"] if (stats and stats.get("price_median", 0) > 0) else (float(selected_var.official_msrp_new or 10000000) * 0.55)
 
         is_gaming = any(k in (model_obj.series or "").upper() or k in model_obj.name.upper() for k in [
             "ROG", "TUF", "LEGION", "LOQ", "PREDATOR", "NITRO", "OMEN", "VICTUS", "ALIENWARE", "GAMING", "PONGO", "TITAN", "KATANA", "CYBORG"
@@ -77,7 +77,7 @@ def render_tradein_calculator(db: Session):
                 <img src="{img_url}" alt="{model_obj.name}" style="width:100%; height:180px; object-fit:cover; border-radius:8px; margin-bottom:12px;" />
                 <h4 style="margin:0 0 4px 0; color:#ffffff; font-size:1.05rem;">{selected_brand} {model_obj.name}</h4>
                 <div style="color:#60a5fa; font-size:0.80rem; font-weight:700;">{model_obj.series or '-'} ({model_obj.release_year})</div>
-                <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-top:2px;">🏷️ Sasis: {model_obj.chassis_code or '-'} | 🧬 {model_obj.generation or '-'}</div>
+                <div style="color:#10b981; font-size:0.75rem; font-weight:700; margin-top:2px;">Sasis: {model_obj.chassis_code or '-'} | Generasi: {model_obj.generation or '-'}</div>
                 <hr style="border-color:#334155; margin:10px 0;" />
                 <div style="font-size:0.78rem; color:#cbd5e1; line-height:1.6;">
                     • <b>CPU:</b> {model_obj.processor_model}<br>
@@ -90,11 +90,11 @@ def render_tradein_calculator(db: Session):
             """, unsafe_allow_html=True)
 
         with col_form:
-            st.markdown("### 📋 Triage Kondisi Fisik & Kerusakan Unit")
+            st.markdown("### Triage Kondisi Fisik & Kerusakan Unit")
 
             op_condition = st.radio(
                 "Kondisi Operasional Utama:",
-                ["🟢 Normal / Menyala (Bisa Masuk Windows/macOS)", "🔴 Mati Total / Blank / No Display (Kanibalan)"],
+                ["Normal / Menyala (Bisa Masuk OS)", "Mati Total / Blank / Rusak Parah (Kanibalan)"],
                 index=0,
                 horizontal=True
             )
@@ -103,10 +103,10 @@ def render_tradein_calculator(db: Session):
             selected_defects = []
 
             if not is_matot:
-                st.markdown("#### 🛠️ Checklist Minus Fisik & Fungsional (Bisa Pilih Lebih Dari Satu):")
+                st.markdown("#### Checklist Kerusakan Fisik & Fungsional (Pilihan Multi-Komponen):")
                 
                 tab_layar, tab_daya, tab_bodi, tab_fungsi, tab_lain = st.tabs([
-                    "🖥️ Layar & Display", "🔋 Baterai & Daya", "🧱 Casing & Engsel", "⌨️ Input & Audio", "🔌 Aksesoris & Storage"
+                    "Layar & Display", "Baterai & Daya", "Casing & Engsel", "Input & Audio", "Aksesoris & Storage"
                 ])
 
                 with tab_layar:
@@ -166,7 +166,7 @@ def render_tradein_calculator(db: Session):
                         if st.checkbox("Masih Harddisk (Non-SSD)", help=DEFECT_CATALOG["storage_hdd"]["description"]):
                             selected_defects.append("storage_hdd")
 
-                st.markdown("#### 📦 Kelengkapan & Garansi:")
+                st.markdown("#### Kelengkapan & Garansi:")
                 col_kel, col_gar = st.columns(2)
                 with col_kel:
                     completeness = st.selectbox(
@@ -181,7 +181,7 @@ def render_tradein_calculator(db: Session):
                         index=0
                     )
             else:
-                st.info("ℹ️ **Unit Mati Total / Kanibalan:** Perhitungan dialihkan otomatis ke formula nilai sisa komponen (12.5% Salvage Value) untuk pemanfaatan spare part layar, RAM, SSD, adaptor, dan casing.")
+                st.info("**Unit Mati Total / Kanibalan:** Perhitungan dialihkan otomatis ke formula nilai sisa komponen (12.5% Salvage Value) untuk pemanfaatan spare part layar, RAM, SSD, adaptor, dan casing.")
                 completeness = "Unit + Charger Original"
                 warranty_status = "Tidak Ada Garansi / Habis"
 
@@ -200,10 +200,10 @@ def render_tradein_calculator(db: Session):
         st.markdown("---")
 
         # 4. Presentasi Hasil Valuasi 3-Dimensi
-        st.markdown("### 💰 Hasil Taksiran Harga Multi-Dimensi")
+        st.markdown("### Hasil Taksiran Harga Multi-Dimensi")
 
         if not res["is_eligible"]:
-            st.error(f"⚠️ **Pemberitahuan:** {res['ineligibility_reason']}")
+            st.error(f"**Pemberitahuan:** {res['ineligibility_reason']}")
             st.caption("Unit Anda tidak memenuhi ambang batas transaksi komersial tunai, namun dapat diserahkan ke program daur ulang limbah elektronik (E-Waste Recycle).")
             return
 
@@ -214,14 +214,14 @@ def render_tradein_calculator(db: Session):
             <div style="background:#1e293b; border:1px solid #3b82f6; border-radius:12px; padding:18px; text-align:center;">
                 <div style="font-size:0.75rem; text-transform:uppercase; color:#93c5fd; font-weight:700;">Jual Sendiri (Pasar Bebas C2C)</div>
                 <div style="font-size:1.60rem; font-weight:800; color:#ffffff; margin:6px 0;">Rp {res['retail_c2c_price']:,.0f}</div>
-                <div style="font-size:0.72rem; color:#94a3b8;">Estimasi jual mandiri di marketplace (butuh waktu 1 - 4 minggu)</div>
+                <div style="font-size:0.72rem; color:#94a3b8;">Estimasi jual mandiri di marketplace (estimasi 1 - 4 minggu)</div>
             </div>
             """, unsafe_allow_html=True)
 
         with kpi_c2:
             st.markdown(f"""
             <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(6,78,59,0.25) 100%); border:2px solid #10b981; border-radius:12px; padding:18px; text-align:center;">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#6ee7b7; font-weight:800;">⚡ Instant Cash Terima Bersih (Toko)</div>
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#6ee7b7; font-weight:800;">Instant Cash Terima Bersih (Toko)</div>
                 <div style="font-size:1.60rem; font-weight:800; color:#34d399; margin:6px 0;">Rp {res['cash_offer_low']:,.0f} - {res['cash_offer_high']:,.0f}</div>
                 <div style="font-size:0.72rem; color:#a7f3d0;">Uang tunai / transfer langsung cair hari ini dari mitra toko</div>
             </div>
@@ -230,7 +230,7 @@ def render_tradein_calculator(db: Session):
         with kpi_c3:
             st.markdown(f"""
             <div style="background:#1e293b; border:1px solid #8b5cf6; border-radius:12px; padding:18px; text-align:center;">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#c4b5fd; font-weight:700;">🔄 Kredit Tukar Tambah (Trade-In)</div>
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#c4b5fd; font-weight:700;">Kredit Tukar Tambah (Trade-In)</div>
                 <div style="font-size:1.60rem; font-weight:800; color:#a78bfa; margin:6px 0;">Rp {res['trade_in_credit']:,.0f}</div>
                 <div style="font-size:0.72rem; color:#cbd5e1;">Bonus nilai ekstra ~8-10% jika ditukar tambah dengan unit toko</div>
             </div>
@@ -238,7 +238,7 @@ def render_tradein_calculator(db: Session):
 
         # 5. Rincian Pemotongan & Breakdown Transparan
         if res["deductions_breakdown"]:
-            with st.expander("🔍 Rincian Pemotongan Nilai & Biaya Sparepart Servis Toko", expanded=False):
+            with st.expander("Rincian Pemotongan Nilai & Estimasi Biaya Servis Toko", expanded=False):
                 st.markdown(f"**Total Akumulasi Biaya Minus:** `Rp {res['total_deductions']:,.0f}` (Margin Pedagang Toko: `{res['margin_rate_pct']}%`)")
                 table_breakdown = []
                 for item in res["deductions_breakdown"]:
@@ -252,7 +252,7 @@ def render_tradein_calculator(db: Session):
         st.markdown("---")
 
         # 6. Form Pengajuan Tiket WhatsApp
-        st.markdown("### 📲 Ajukan Penjualan / Jadwalkan Inspeksi Toko")
+        st.markdown("### Ajukan Penjualan / Jadwalkan Inspeksi Toko")
         f_c1, f_c2, f_c3 = st.columns(3)
         with f_c1:
             nama_user = st.text_input("Nama Lengkap:", placeholder="Contoh: Budi Santoso")
@@ -285,8 +285,8 @@ Bagaimana prosedur inspeksi dan penyerahan unit selanjutnya? Terima kasih."""
 
         st.markdown(f"""
         <div style="margin-top:10px;">
-            <a href="{wa_url}" target="_blank" style="display:inline-block; background-color:#10b981; color:#ffffff; font-weight:700; font-size:1rem; padding:12px 24px; border-radius:8px; text-decoration:none; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
-                💬 Ajukan Jual / Chat WhatsApp Admin Sekarang ↗
+            <a href="{wa_url}" target="_blank" style="display:inline-block; background-color:#10b981; color:#ffffff; font-weight:700; font-size:0.95rem; padding:12px 24px; border-radius:8px; text-decoration:none; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                Ajukan Penjualan via WhatsApp
             </a>
         </div>
         """, unsafe_allow_html=True)

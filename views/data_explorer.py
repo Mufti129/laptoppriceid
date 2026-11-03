@@ -30,11 +30,11 @@ def render_data_explorer(db: Session):
         st.markdown(f"""
         <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:10px; padding:12px 18px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <div>
-                <span style="font-weight:700; color:#f8fafc; font-size:0.95rem;">🔍 Audit Transparansi Data:</span>
+                <span style="font-weight:700; color:#f8fafc; font-size:0.95rem;">Audit Transparansi Data:</span>
                 <span style="color:#38bdf8; font-size:0.88rem; margin-left:8px;">Terdata <b>{total_real:,} Posting Riil Aktif ({pct_real:.1f}%)</b> | <b>{total_synth} Data Sintetis/Dummy</b></span>
             </div>
             <div style="background:{'#059669' if total_synth == 0 else '#eab308'}; color:#ffffff; font-size:0.75rem; font-weight:800; padding:4px 12px; border-radius:6px;">
-                {'✅ 100% DATA RIIL POSTINGAN' if total_synth == 0 else '⚠️ TERDETEKSI DATA SIMULASI'}
+                {'100% DATA RIIL POSTINGAN' if total_synth == 0 else 'TERDETEKSI DATA SIMULASI'}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -43,7 +43,7 @@ def render_data_explorer(db: Session):
         with col_f1:
             f_status = st.radio("Saring Status Validasi:", ["Semua Listing", "Listing Tunai Valid", "Iklan DP Semu / Terdeteksi Scam"], horizontal=True)
         with col_f2:
-            f_origin = st.selectbox("Saring Keaslian Data:", ["Semua Data", "🟢 Hanya Posting Riil", "⚠️ Hanya Sintetis/Dummy"])
+            f_origin = st.selectbox("Saring Keaslian Data:", ["Semua Data", "Hanya Posting Riil", "Hanya Sintetis/Dummy"])
         with col_f3:
             f_platform = st.selectbox("Saring Platform Marketplace:", ["Semua Platform", "Carousell", "Tokopedia", "Shopee"])
 
@@ -53,9 +53,9 @@ def render_data_explorer(db: Session):
         elif f_status == "Iklan DP Semu / Terdeteksi Scam":
             q = q.filter(ScrapedListing.is_dp_price == True)
 
-        if f_origin == "🟢 Hanya Posting Riil":
+        if f_origin == "Hanya Posting Riil":
             q = q.filter(ScrapedListing.is_synthetic == False)
-        elif f_origin == "⚠️ Hanya Sintetis/Dummy":
+        elif f_origin == "Hanya Sintetis/Dummy":
             q = q.filter(ScrapedListing.is_synthetic == True)
 
         if f_platform != "Semua Platform":
@@ -69,12 +69,12 @@ def render_data_explorer(db: Session):
                 is_syn = getattr(r, "is_synthetic", False)
                 data.append({
                     "ID": r.id,
-                    "Asal Data": "⚠️ Sintetis/Dummy" if is_syn else "🟢 Posting Riil",
+                    "Asal Data": "Sintetis/Dummy" if is_syn else "Posting Riil",
                     "Platform": r.source_platform.upper(),
                     "Toko / Seller": r.seller_name or "-",
                     "Judul Iklan": r.title,
                     "Harga (IDR)": f"Rp {r.price:,.0f}",
-                    "Status": "⚠️ DP / Scam" if r.is_dp_price else "✅ Tunai Valid",
+                    "Status": "DP / Scam" if r.is_dp_price else "Tunai Valid",
                     "Kota": r.city or "-",
                     "Link Listing": r.url or "",
                     "Garansi": r.warranty_type or "-",
@@ -120,7 +120,7 @@ def render_data_explorer(db: Session):
                 status_color = "#ef4444" if is_scam else "#10b981"
                 st.markdown(f"""
                 **Evaluasi Keamanan Harga:**
-                - Status: <span style='color:{status_color}; font-weight:800;'>{'⚠️ TERDETEKSI SCAM / DP SEMU' if is_scam else '✅ LISTING AMAN'}</span>
+                - Status: <span style='color:{status_color}; font-weight:800;'>{'TERDETEKSI SCAM / DP SEMU' if is_scam else 'LISTING AMAN'}</span>
                 - Alasan: `{scam_reason}`
                 """, unsafe_allow_html=True)
     except Exception as e:
