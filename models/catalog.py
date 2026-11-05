@@ -144,6 +144,7 @@ class ScrapedListing(Base):
 
     # Harga & Filter Penipuan (DP Scam Filter)
     price = Column(Numeric(15, 2), nullable=False, index=True)
+    condition = Column(String(20), default="BEKAS", index=True)         # 'BARU', 'BEKAS'
     is_dp_price = Column(Boolean, default=False, index=True)            # True jika harga hanya DP / Angsuran palsu
 
     # Atribut Spesifik Pasar Laptop Sekunder (Hasil Ekstraksi NLP)
