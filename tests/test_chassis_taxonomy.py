@@ -20,8 +20,8 @@ class TestChassisTaxonomy(unittest.TestCase):
 
         conn.close()
 
-        self.assertEqual(total_count, 1000)
-        self.assertEqual(filled_count, 1000, "Seluruh 1.000 model wajib memiliki kode sasis yang terisi!")
+        self.assertGreaterEqual(total_count, 1000)
+        self.assertEqual(filled_count, total_count, "Seluruh model master wajib memiliki kode sasis yang terisi!")
 
     def test_asus_chassis_resolution(self):
         """Verifikasi taksonomi sasis ASUS ROG Strix dan kasta GPU."""

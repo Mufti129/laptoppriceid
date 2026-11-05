@@ -73,6 +73,9 @@ class MasterModel(Base):
     image_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # 7. Penilaian Nilai Pasar Wajar (Fair Market Value)
+    fair_market_value = Column(Numeric(15, 2), nullable=True)          # Nilai Pasar Wajar / Fair Value Bekas Hasil Kalkulasi Tarikan OLX (IDR)
+
     brand = relationship("MasterBrand", back_populates="models")
     variants = relationship("MasterVariant", back_populates="model", cascade="all, delete-orphan")
 
@@ -90,12 +93,36 @@ class MasterVariant(Base):
     storage_gb = Column(Integer, nullable=False)                        # 256, 512, 1024 (1TB), 2048 (2TB)
     color_options = Column(String(200), nullable=True)                  # Eclipse Gray, Moonlight White, Deep Black, Space Gray
     official_msrp_new = Column(Numeric(15, 2), nullable=False)          # Harga Peluncuran Resmi OTR Indonesia (IDR)
+    fair_market_value = Column(Numeric(15, 2), nullable=True)          # Nilai Pasar Wajar / Fair Value Bekas Hasil Kalkulasi Tarikan OLX (IDR)
     aliases = Column(Text, nullable=True)                               # Keyword pencarian & singkatan pasar (e.g. g14 4060, x1c gen11, mbp14 m3)
     image_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     model = relationship("MasterModel", back_populates="variants")
     scraped_listings = relationship("ScrapedListing", back_populates="matched_variant")
+
+
+class KodeModelLookup(Base):
+    """
+    Indeks Pencarian Balik (Reverse Lookup) Kode Model / Sasis / SKU Laptop.
+    """
+    __tablename__ = "kode_model_lookup"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    kode_model = Column(String(100), nullable=False, index=True)
+    kode_norm = Column(String(100), nullable=False, index=True)
+    varian_kode = Column(String(100), nullable=True)
+    brand = Column(String(50), nullable=True, index=True)
+    nama_komersial = Column(String(150), nullable=True)
+    seri = Column(String(100), nullable=True)
+    generasi = Column(String(50), nullable=True)
+    tahun_rilis = Column(Integer, nullable=True)
+    ukuran_layar = Column(String(50), nullable=True)
+    cpu = Column(String(100), nullable=True)
+    gpu = Column(String(100), nullable=True)
+    berat = Column(String(50), nullable=True)
+    nama_seri_lengkap = Column(String(200), nullable=True)
+    url_sumber = Column(Text, nullable=True)
 
 
 class ScrapedListing(Base):

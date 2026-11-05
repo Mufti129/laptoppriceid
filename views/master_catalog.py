@@ -213,7 +213,8 @@ def render_master_catalog(db: Session):
             MasterVariant.official_msrp_new,
             MasterVariant.ram_gb,
             MasterVariant.storage_gb,
-            MasterVariant.id.label("variant_id")
+            MasterVariant.id.label("variant_id"),
+            MasterModel.fair_market_value.label("fmv_val")
         ).join(
             MasterBrand, MasterModel.brand_id == MasterBrand.id
         ).outerjoin(
@@ -265,18 +266,19 @@ def render_master_catalog(db: Session):
         total_filtered = len(records)
         unique_models = len(set(r[0].id for r in records))
         avg_msrp = np.mean([float(r[2]) for r in records if r[2]]) if records else 0
+        avg_fmv = np.mean([float(r[6]) for r in records if len(r) > 6 and r[6]]) if records else 0
 
         st.markdown(f"""
         <div class="kpi-grid">
             <div class="pro-metric-card">
                 <div class="pro-metric-label">Model Terfilter</div>
-                <div class="pro-metric-val">{unique_models} Model</div>
-                <div class="pro-metric-sub">{total_filtered} Varian Terdaftar</div>
+                <div class="pro-metric-val">{unique_models:,} Model</div>
+                <div class="pro-metric-sub">{total_filtered:,} Varian Terdaftar</div>
             </div>
             <div class="pro-metric-card emerald">
-                <div class="pro-metric-label">Rentang Tahun</div>
-                <div class="pro-metric-val">{year_range[0]} - {year_range[1]}</div>
-                <div class="pro-metric-sub emerald">Historis Terverifikasi</div>
+                <div class="pro-metric-label">Rata-Rata FMV Pasar OLX</div>
+                <div class="pro-metric-val">Rp {avg_fmv:,.0f}</div>
+                <div class="pro-metric-sub emerald">Taksiran Pasar Sekunder</div>
             </div>
             <div class="pro-metric-card purple">
                 <div class="pro-metric-label">Rata-Rata MSRP Baru</div>
@@ -296,16 +298,23 @@ def render_master_catalog(db: Session):
             view_mode = st.radio("Format Tampilan Katalog:", ["Tabel Data Lengkap", "Galeri Kartu Produk Visual"], horizontal=True)
 
             if view_mode == "Galeri Kartu Produk Visual":
-                st.markdown("#### 📸 Galeri Visual Produk Laptop")
+                st.markdown("#### Galeri Visual Produk Laptop")
                 sample_records = records[:24]  # showcase top 24 filtered products
                 cols_per_row = 4
                 for row_idx in range(0, len(sample_records), cols_per_row):
                     row_items = sample_records[row_idx:row_idx+cols_per_row]
                     cols = st.columns(cols_per_row)
                     for col_idx, item in enumerate(row_items):
-                        m, b_name, msrp, ram, rom, vid = item
+                        m = item[0]
+                        b_name = item[1]
+                        msrp = item[2]
+                        ram = item[3]
+                        rom = item[4]
+                        vid = item[5]
+                        fmv = item[6] if len(item) > 6 else (m.fair_market_value or 0)
                         img_url = m.image_url or get_product_image_url(b_name, m.series, m.name)
                         msrp_val = float(msrp) if msrp else 0
+                        fmv_val = float(fmv) if fmv else 0.0
                         plat_val = get_model_platform(b_name, m.series, m.name, vid)
                         audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val, m.chassis_code)
                         audit_url = get_audit_search_url(plat_val, audit_kw)
@@ -337,9 +346,15 @@ def render_master_catalog(db: Session):
                                         CPU: {m.processor_model or '-'}<br>
                                         GPU: {m.gpu_model or 'iGPU'}
                                     </div>
-                                    <div style="border-top:1px solid #334155; padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-size:0.72rem; color:#94a3b8;">{ram or '-'}GB / {rom or '-'}GB</span>
-                                        <span class="laptop-card-price">{'Rp ' + f'{msrp_val:,.0f}' if msrp_val > 0 else '-'}</span>
+                                    <div style="border-top:1px solid #334155; padding-top:6px; display:flex; flex-direction:column; gap:2px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-size:0.70rem; color:#94a3b8;">FMV Bekas (OLX):</span>
+                                            <span style="font-size:0.80rem; font-weight:800; color:#4ade80;">{'Rp ' + f'{fmv_val:,.0f}' if fmv_val > 0 else '-'}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-size:0.68rem; color:#64748b;">MSRP Baru:</span>
+                                            <span style="font-size:0.72rem; color:#cbd5e1;">{'Rp ' + f'{msrp_val:,.0f}' if msrp_val > 0 else '-'}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -348,10 +363,19 @@ def render_master_catalog(db: Session):
                     st.caption(f"Menampilkan 24 dari {len(records)} produk terfilter. Pilih 'Tabel Data Lengkap' untuk melihat dan mengunduh seluruh baris.")
 
             table_data = []
-            for m, b_name, msrp, ram, rom, vid in records:
+            for item in records:
+                m = item[0]
+                b_name = item[1]
+                msrp = item[2]
+                ram = item[3]
+                rom = item[4]
+                vid = item[5]
+                fmv = item[6] if len(item) > 6 else (m.fair_market_value or 0)
+
                 gpu_str = f"{m.gpu_model} ({m.vram_gb}GB, {m.tgp_watt}W)" if m.vram_gb > 0 else (m.gpu_model or "iGPU")
                 ram_up = "Dual SODIMM" if m.is_ram_upgradeable else "Soldered"
                 msrp_val = float(msrp) if msrp else 0
+                fmv_val = float(fmv) if fmv else (float(m.fair_market_value) if m.fair_market_value else 0.0)
                 plat_val = get_model_platform(b_name, m.series, m.name, vid)
                 audit_kw = generate_audit_search_keyword(b_name, m.series, m.name, m.processor_model, m.gpu_model, m.vram_gb, ram, rom, plat_val, m.chassis_code)
 
@@ -374,6 +398,7 @@ def render_master_catalog(db: Session):
                     "Storage SSD": f"{rom} GB" if rom else "-",
                     "Baterai": f"{m.battery_wh} Wh" if m.battery_wh else "-",
                     "Bobot": f"{m.weight_kg} kg" if m.weight_kg else "-",
+                    "Fair Value Market (OLX)": f"Rp {fmv_val:,.0f}" if fmv_val > 0 else "-",
                     "MSRP Baru (IDR)": f"Rp {msrp_val:,.0f}" if msrp_val > 0 else "-"
                 })
 

@@ -128,7 +128,14 @@ def render_tradein_calculator(db: Session):
 
         pricing_engine = LaptopPricingEngine(db)
         stats = pricing_engine.calculate_variant_pricing_stats(default_var.id) if default_var else None
-        base_fmv = stats["price_median"] if (stats and stats.get("price_median", 0) > 0) else (float(default_var.official_msrp_new if default_var else 10000000) * 0.55)
+        if stats and stats.get("price_median", 0) > 0:
+            base_fmv = stats["price_median"]
+        elif model_obj.fair_market_value and float(model_obj.fair_market_value) > 0:
+            base_fmv = float(model_obj.fair_market_value)
+        elif default_var and default_var.fair_market_value and float(default_var.fair_market_value) > 0:
+            base_fmv = float(default_var.fair_market_value)
+        else:
+            base_fmv = float(default_var.official_msrp_new if default_var else 10000000) * 0.55
 
         is_gaming = any(k in (model_obj.series or "").upper() or k in model_obj.name.upper() for k in [
             "ROG", "TUF", "LEGION", "LOQ", "PREDATOR", "NITRO", "OMEN", "VICTUS", "ALIENWARE", "GAMING", "PONGO", "TITAN", "KATANA", "CYBORG"

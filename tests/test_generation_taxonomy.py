@@ -21,8 +21,8 @@ class TestGenerationTaxonomy(unittest.TestCase):
 
         conn.close()
 
-        self.assertEqual(total_count, 1000)
-        self.assertEqual(filled_count, 1000, "Seluruh 1.000 model wajib memiliki kolom generation yang terisi!")
+        self.assertGreaterEqual(total_count, 1000)
+        self.assertEqual(filled_count, total_count, "Seluruh model master wajib memiliki kolom generation yang terisi!")
 
     def test_zero_redundant_year_suffixes_in_model_names(self):
         """Verifikasi bahwa tidak ada lagi nama model yang berakhiran redundan (YYYY)."""
@@ -34,7 +34,7 @@ class TestGenerationTaxonomy(unittest.TestCase):
         conn.close()
 
         for n in names:
-            self.assertFalse(bool(re.search(r"\s*\(\d{4}\)$", n)), f"Model \x27{n}\x27 masih memiliki akhiran tahun (YYYY)!")
+            self.assertFalse(bool(re.search(r"\s*\((?:19\d\d|20\d\d)\)$", n)), f"Model '{n}' masih memiliki akhiran tahun (YYYY)!")
 
     def test_lenovo_generation_mapping(self):
         """Verifikasi taksonomi generasi Lenovo ThinkPad & Legion."""

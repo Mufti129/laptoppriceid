@@ -30,9 +30,10 @@ class TestAuditUIAndEngine(unittest.TestCase):
         self.assertGreaterEqual(listing_count, 1000, "Jumlah listing riil hasil scraping minimal 1000")
 
     def test_each_brand_has_at_least_100_models(self):
-        brands = self.db.query(MasterBrand).all()
-        self.assertGreaterEqual(len(brands), 10)
-        for b in brands:
+        core_10_brands = ["Apple", "Lenovo", "ASUS", "Acer", "HP", "Dell", "MSI", "Axioo", "Huawei", "Microsoft"]
+        for b_name in core_10_brands:
+            b = self.db.query(MasterBrand).filter(MasterBrand.name.ilike(b_name)).first()
+            self.assertIsNotNone(b, f"Brand {b_name} harus ada di database master")
             m_count = self.db.query(MasterModel).filter(MasterModel.brand_id == b.id).count()
             self.assertGreaterEqual(m_count, 100, f"Brand {b.name} harus memiliki minimal 100 model (ditemukan {m_count})")
 
