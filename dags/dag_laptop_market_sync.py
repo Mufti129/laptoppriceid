@@ -147,9 +147,11 @@ with DAG(
         python_callable=task_sync_laptopmedia_and_fmv_columns,
     )
 
+    PYTHON_EXEC = os.getenv("LAPTOPPRICEID_PYTHON", "/Users/macbookair/Documents/Scrape Data HP/venv/bin/python")
+
     t6_data_quality_audit = BashOperator(
         task_id="t6_data_quality_audit",
-        bash_command=f"python3 {os.path.join(ROOT_DIR, 'tests', 'test_chassis_taxonomy.py')}",
+        bash_command=f'"{PYTHON_EXEC}" "{os.path.join(ROOT_DIR, "tests", "test_chassis_taxonomy.py")}"',
     )
 
     # Definisi dependensi alur kerja DAG

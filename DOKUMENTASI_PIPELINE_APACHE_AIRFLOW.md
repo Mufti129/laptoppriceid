@@ -357,15 +357,18 @@ airflow tasks test dag_laptop_market_sync t6_data_quality_audit 2026-11-05
 
 ---
 
-### 8. Ringkasan Status Database Terkini
+### 8. Ringkasan Status Database & Integrasi Airflow Terkini
 
 | Parameter Metrik | Hasil Verifikasi Terkini |
 | :--- | :--- |
 | **Total Brand Terdaftar** | 27 Brand |
-| **Total Model di Master Catalog** | 8.444 Model |
-| **Total Varian Spesifikasi** | 8.444 Varian |
+| **Total Model di Master Catalog** | 8.714 Model |
+| **Total Varian Spesifikasi** | 8.714 Varian |
 | **Total Indeks Nomor Sasis / SKU (`kode_model_lookup`)** | 20.331 Chassis Records |
-| **Cakupan Nilai Fair Market Value (`fair_market_value`)** | 100,0% (8.444 / 8.444) |
-| **Rata-Rata Fair Market Value (Bekas Pasar OLX)** | Rp 12.410.616 |
-| **Ukuran File Database (`laptop_bekas.db`)** | 14 MB (Aman untuk GitHub) |
+| **Cakupan Nilai Fair Market Value (`fair_market_value`)** | 100,0% (8.714 / 8.714) |
+| **Rata-Rata Fair Market Value (Bekas Pasar OLX)** | Rp 12.546.682 |
+| **Total Listing Riil Pasar Sekunder** | 4.213 Listing |
+| **Ukuran File Database (`laptop_bekas.db`)** | 14,5 MB (Aman untuk GitHub) |
 | **Status Unit Tests (`python -m unittest`)** | 35 Lulus, 0 Gagal (100% OK) |
+| **Airflow Live Instance (`http://localhost:8088/`)** | Aktif: `dag_price_intelligence_laptop` & `dag_laptop_market_sync` |
+| **Master Catalog Explorer (`http://localhost:8095/`)** | Aktif: Menampilkan 8.714 Model Laptop |

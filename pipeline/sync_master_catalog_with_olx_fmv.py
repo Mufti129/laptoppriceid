@@ -20,9 +20,23 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 TARGET_DB_PATH = ROOT_DIR / "laptop_bekas.db"
-LAPTOPMEDIA_DB_PATH = Path("/tmp/integrasi_harga_laptop_extracted/integrasi_harga_laptop/data/laptopmedia_master.db")
-INTEGRASI_DB_PATH = Path("/tmp/integrasi_harga_laptop_extracted/integrasi_harga_laptop/data/integrasi_pasar_laptopmedia.db")
-OLX_DB_PATH = Path("/tmp/integrasi_harga_laptop_extracted/integrasi_harga_laptop/data/olx_scraper.db")
+EXTRACT_DIR = Path("/tmp/integrasi_harga_laptop_extracted/integrasi_harga_laptop/data")
+ZIP_SOURCE_PATH = Path("/Users/macbookair/Downloads/integrasi_harga_laptop.zip")
+
+def ensure_source_files_extracted():
+    if not (EXTRACT_DIR / "laptopmedia_master.db").exists():
+        if ZIP_SOURCE_PATH.exists():
+            import zipfile
+            print(f"[EXTRACT] Mengekstrak sumber data dari {ZIP_SOURCE_PATH}...")
+            with zipfile.ZipFile(ZIP_SOURCE_PATH, 'r') as zf:
+                zf.extractall("/tmp/integrasi_harga_laptop_extracted")
+            print("[EXTRACT] Selesai ekstraksi!")
+
+ensure_source_files_extracted()
+
+LAPTOPMEDIA_DB_PATH = EXTRACT_DIR / "laptopmedia_master.db"
+INTEGRASI_DB_PATH = EXTRACT_DIR / "integrasi_pasar_laptopmedia.db"
+OLX_DB_PATH = EXTRACT_DIR / "olx_scraper.db"
 
 
 def ensure_schema_migrations(conn: sqlite3.Connection):
@@ -291,6 +305,8 @@ def sync_master_models_and_variants(target_conn: sqlite3.Connection, olx_by_code
     for r in src_rows:
         brand_str = str(r[0] or "").strip()
         model_str = str(r[1] or "").strip()
+        # Bersihkan akhiran tahun redundan seperti (2023) atau (2024)
+        model_str = re.sub(r"\s*\((?:19\d\d|20\d\d)\)$", "", model_str).strip()
         code_str = str(r[2] or "").strip()
         gen_str = str(r[3] or "").strip()
         series_str = str(r[6] or "").strip()
@@ -433,6 +449,17 @@ def sync_master_models_and_variants(target_conn: sqlite3.Connection, olx_by_code
         calculated_fmv = calculate_econometric_fmv("Laptop", m_name, m_cpu or "", m_gpu or "", r_gb, s_gb, m_yr, msrp_val)
         target_cur.execute("UPDATE master_models SET fair_market_value = ? WHERE id = ?", (calculated_fmv, m_id))
         target_cur.execute("UPDATE master_variants SET fair_market_value = ? WHERE model_id = ?", (calculated_fmv, m_id))
+
+    # Pembersihan final: pastikan seluruh model di master_models bebas dari akhiran redundan (YYYY)
+    target_cur.execute("SELECT id, name FROM master_models")
+    for m_id, m_name in target_cur.fetchall():
+        if re.search(r"\s*\((?:19\d\d|20\d\d)\)$", m_name):
+            cleaned = re.sub(r"\s*\((?:19\d\d|20\d\d)\)$", "", m_name).strip()
+            target_cur.execute("UPDATE master_models SET name = ? WHERE id = ?", (cleaned, m_id))
+            target_cur.execute("SELECT id, variant_name FROM master_variants WHERE model_id = ?", (m_id,))
+            for vid, vname in target_cur.fetchall():
+                v_cleaned = re.sub(r"\s*\((?:19\d\d|20\d\d)\)", "", vname).strip()
+                target_cur.execute("UPDATE master_variants SET variant_name = ? WHERE id = ?", (v_cleaned, vid))
 
     target_conn.commit()
     src_conn.close()
