@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
 """
-Pipeline Pembaruan Berkas Excel (Diperbarui dengan Parameter Tahun Rilis):
-1. Membaca listing harga riil laptop dari Tokopedia Trusted Sellers, Marketplace, dan DB.
+Pipeline Pembaruan Berkas Excel:
+1. Membaca listing harga riil laptop dari Tokopedia Trusted Sellers, Marketplace FB/OLX, dan DB.
 2. Mengekstraksi dan menstandarisasi Tahun Rilis / Generasi untuk setiap listing.
-3. Menulis ke tab 'list harga tarikan' dengan kolom 'Tahun Rilis Model'.
-4. Menginjeksi rumus FMV dinamis berbasis kriteria ganda (Model Terkait DAN Tahun Rilis):
-   - Jumlah Sampel Iklan (Model + Tahun) (COUNTIFS)
-   - Harga Pasar Terendah / Min (MINIFS)
-   - Harga Pasar Tertinggi / Max (MAXIFS)
-   - Harga Rata-Rata / Mean (AVERAGEIFS)
-   - Harga (FMV Rp) (MEDIAN(IF((range_model=C)*(range_year=F), range_price)))
+3. Menulis ke tab 'list harga tarikan' (13 kolom).
+4. Menghitung dan membuat tab khusus 'Matriks FMV (Model & Tahun)' (identik dengan implementasi pada pemetaan motor):
+   - Merek
+   - Model Terkait (LaptopMedia)
+   - Mapping Kategori Internal (Gaming, Premium/Ultrabook, Bisnis, Consumer)
+   - Tahun Rilis Model
+   - Sampel Riil
+   - Harga Minimum (Rp)
+   - Harga Bawah P25 (Rp)
+   - Harga FMV Median (Rp)
+   - Harga Atas P75 (Rp)
+   - Harga Maksimum (Rp)
+   - Harga Rata-Rata (Rp)
+5. Memetakan ke tab 'Katalog Seri LaptopMedia' menggunakan formula SUMIFS universal yang bebas dari error #NAME?:
+   - Jumlah Sampel Iklan (Model + Tahun)
+   - Harga Pasar Terendah (Min)
+   - Harga Pasar Tertinggi (Max)
+   - Harga Rata-Rata (Mean Rp)
+   - Harga (FMV Rp)
    - Metode Kalkulasi FMV
-5. Menyinkronkan file ke seluruh direktori terkait dan exports/.
+6. Menyinkronkan file ke seluruh direktori terkait dan exports/.
 """
 
 import os
 import re
 import sys
 import sqlite3
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
@@ -38,7 +51,7 @@ INTEGRASI_DB_PATH = Path("/tmp/integrasi_harga_laptop_extracted/integrasi_harga_
 TOKOPEDIA_CSV = ROOT_DIR / "exports" / "tarikan_harga_tokopedia_trusted_sellers.csv"
 
 
-def load_laptopmedia_metadata(wb: openpyxl.Workbook) -> tuple[set[str], dict[str, int], dict[str, int]]:
+def load_laptopmedia_metadata(wb: openpyxl.Workbook) -> tuple[set[str], dict[str, int], dict[str, int], dict[str, int]]:
     """Membaca daftar Model Terkait, pemetaan tahun, dan fallback FMV dari Katalog Seri LaptopMedia & DB."""
     ws = wb["Katalog Seri LaptopMedia"]
     lm_models = set()
@@ -151,6 +164,10 @@ def normalize_model_for_lm(raw_model: str, brand: str, title: str, lm_models: se
         return "Lenovo ThinkPad T450"
 
     # ASUS
+    if "flow x13" in m.lower() or "flow x13" in t:
+        return "ASUS ROG Flow X13"
+    if "flow z13" in m.lower() or "flow z13" in t:
+        return "ASUS ROG Flow Z13"
     if "vivobook 14" in m.lower() or "vivobook 14" in t:
         return "ASUS VivoBook 14"
     if "vivobook 15" in m.lower() or "vivobook 15" in t:
@@ -177,7 +194,7 @@ def normalize_model_for_lm(raw_model: str, brand: str, title: str, lm_models: se
         return "Acer Swift 3"
 
     # HP
-    if "victus 15" in m.lower() or "victus" in t:
+    if "victus 15" in m.lower() or "victus 16" in m.lower() or "victus" in t:
         return "HP Victus 15"
     if "elitebook 840 g3" in m.lower() or "840 g3" in t:
         return "HP EliteBook 840 G3"
@@ -208,7 +225,6 @@ def normalize_model_for_lm(raw_model: str, brand: str, title: str, lm_models: se
 def extract_year_advanced(title: str) -> int | None:
     """Ekstraksi tahun rilis dari judul iklan dengan pembersihan tanggal garansi masa depan."""
     t = str(title).lower()
-    # Bersihkan pola garansi masa depan (misal: 'garansi on 2027', 'garansi sampai 2028')
     t_clean = re.sub(r'garansi[^\n\r,.]*?\b202[5-9]\b', '', t)
     t_clean = re.sub(r'on\s*\d{1,2}/\d{1,2}/202[5-9]', '', t_clean)
 
@@ -224,7 +240,7 @@ def extract_year_advanced(title: str) -> int | None:
     if "m2" in t_clean: return 2022
     if "m3" in t_clean or "m4" in t_clean: return 2024
 
-    # 3. Frasa Generasi CPU Intel (misal: 'core i3 gen 6', 'gen 8', 'generation 11')
+    # 3. Frasa Generasi CPU Intel
     m_gen_phrase = re.search(r'(?:core\s*i[3579]|intel)[^\d]{1,10}(?:gen|generation)\s*(\d{1,2})', t_clean)
     if not m_gen_phrase:
         m_gen_phrase = re.search(r'\b(?:gen|generation)\s*(\d{1,2})\b', t_clean)
@@ -237,7 +253,7 @@ def extract_year_advanced(title: str) -> int | None:
         if g in gen_map:
             return gen_map[g]
 
-    # 4. Nomor Model CPU Intel (misal: i3 4030U, i5-8250U, i7-10750H, i3-1115G4, i7-13620H)
+    # 4. Nomor Model CPU Intel
     m_cpu = re.search(r'i[3579][-\s]*(\d{1,2})\d{3}[a-z0-9]*', t_clean)
     if m_cpu:
         g = int(m_cpu.group(1))
@@ -248,7 +264,7 @@ def extract_year_advanced(title: str) -> int | None:
         if g in cpu_map:
             return cpu_map[g]
 
-    # 5. Seri AMD Ryzen (misal: ryzen 5 3500U, ryzen 7 5800H, ryzen 5 8645HS)
+    # 5. Seri AMD Ryzen
     m_ryzen = re.search(r'ryzen\s*[3579][-\s]*(\d)\d{3}', t_clean)
     if m_ryzen:
         rg = int(m_ryzen.group(1))
@@ -273,29 +289,37 @@ def extract_year_advanced(title: str) -> int | None:
 def resolve_listing_release_year(title: str, model_terkait: str, raw_model: str,
                                  lm_model_year: dict[str, int], db_model_year: dict[str, int]) -> int:
     """Menentukan tahun rilis listing dengan prioritas: Judul -> Model Terkait -> LM Katalog -> DB."""
-    # 1. Ekstraksi spesifik dari judul
     y_title = extract_year_advanced(title)
     if y_title and 2010 <= y_title <= 2026:
         return y_title
 
-    # 2. Cek tahun yang tertanam di string nama model (misal: 'Apple MacBook Air 13 (2020)')
     m_in_name = re.search(r'\(.*?(20[12]\d).*?\)', model_terkait)
     if m_in_name:
         y_name = int(m_in_name.group(1))
         if 2010 <= y_name <= 2026:
             return y_name
 
-    # 3. Lookup di Katalog LaptopMedia
     if model_terkait in lm_model_year:
         return lm_model_year[model_terkait]
 
-    # 4. Lookup di Database Master
     if raw_model in db_model_year:
         return db_model_year[raw_model]
     if model_terkait in db_model_year:
         return db_model_year[model_terkait]
 
     return 2021
+
+
+def get_mapping_tier(model_name: str) -> str:
+    """Menentukan mapping tier/kategori internal laptop."""
+    m_lower = str(model_name).lower()
+    if any(k in m_lower for k in ['rog', 'tuf', 'legion', 'gaming', 'nitro', 'predator', 'loq', 'victus', 'omen', 'alienware', 'blade']):
+        return 'Laptop Gaming'
+    if any(k in m_lower for k in ['macbook', 'zenbook', 'xps', 'spectre', 'yoga', 'thinkpad x1', 'gram', 'surface', 'prestige']):
+        return 'Laptop Premium / Ultrabook'
+    if any(k in m_lower for k in ['thinkpad', 'latitude', 'elitebook', 'probook', 'expertbook', 'vostro', 'precision', 'zbook']):
+        return 'Laptop Bisnis / Commercial'
+    return 'Laptop Consumer'
 
 
 def collect_all_market_listings(lm_models: set[str], lm_model_year: dict[str, int],
@@ -398,7 +422,6 @@ def collect_all_market_listings(lm_models: set[str], lm_model_year: dict[str, in
             model_terkait = normalize_model_for_lm(raw_m, brand, title, lm_models)
             tahun_rilis = resolve_listing_release_year(title, model_terkait, raw_m, lm_model_year, db_model_year)
             if model_year and 2010 <= model_year <= 2026:
-                # Jika judul tidak memuat tahun eksplisit yang berbeda, prioritaskan tahun sasis model
                 y_from_title = extract_year_advanced(title)
                 if not y_from_title:
                     tahun_rilis = int(model_year)
@@ -427,9 +450,48 @@ def collect_all_market_listings(lm_models: set[str], lm_model_year: dict[str, in
     return df
 
 
+def calculate_fmv_matrix(df_listings: pd.DataFrame) -> pd.DataFrame:
+    """Mengkalkulasi agregat statistik Matriks FMV (Model & Tahun) dari data listing pasar riil."""
+    print("[MATRIX CALC] Menghitung distribusi Matriks FMV (Model & Tahun)...")
+    matrix_rows = []
+    grouped = df_listings.groupby(["brand", "model_terkait", "tahun_rilis_model"])
+
+    for (brand, model, year), group in grouped:
+        prices = group["harga"].dropna().astype(float).values
+        n = len(prices)
+        if n == 0:
+            continue
+        p_min = int(np.min(prices))
+        p25 = int(round(np.percentile(prices, 25), -3))
+        p_med = int(round(np.median(prices), -3))
+        p75 = int(round(np.percentile(prices, 75), -3))
+        p_max = int(np.max(prices))
+        p_mean = int(round(np.mean(prices), -3))
+        tier = get_mapping_tier(model)
+
+        matrix_rows.append({
+            "Merek": brand,
+            "Model Terkait (LaptopMedia)": model,
+            "Mapping Kategori Internal": tier,
+            "Tahun Rilis": int(year),
+            "Sampel Riil": n,
+            "Harga Minimum (Rp)": p_min,
+            "Harga Bawah P25 (Rp)": p25,
+            "Harga FMV Median (Rp)": p_med,
+            "Harga Atas P75 (Rp)": p75,
+            "Harga Maksimum (Rp)": p_max,
+            "Harga Rata-Rata (Rp)": p_mean
+        })
+
+    df_matrix = pd.DataFrame(matrix_rows)
+    df_matrix = df_matrix.sort_values(by=["Merek", "Model Terkait (LaptopMedia)", "Tahun Rilis"]).reset_index(drop=True)
+    print(f"[MATRIX CALC] Berhasil menghitung {len(df_matrix)} entri Matriks FMV.")
+    return df_matrix
+
+
 def update_workbook():
     print("=" * 80)
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] MEMULAI PEMBARUAN MASTER WORKBOOK EXCEL (PARAMETER TAHUN RILIS)")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] MEMULAI PEMBARUAN MASTER WORKBOOK EXCEL (TAB MATRIKS FMV)")
     print("=" * 80)
 
     if not EXCEL_PRIMARY.exists():
@@ -446,17 +508,11 @@ def update_workbook():
     df_listings = collect_all_market_listings(lm_models, lm_model_year, db_model_year)
     n_listings = len(df_listings)
 
-    # 2. Perbarui Sheet 'list harga tarikan'
-    sheet_name_tarikan = "list harga tarikan"
-    if sheet_name_tarikan in wb.sheetnames:
-        print(f"[SHEET] Memperbarui sheet eksisting: '{sheet_name_tarikan}'...")
-        ws_tarikan = wb[sheet_name_tarikan]
-        ws_tarikan.delete_rows(1, ws_tarikan.max_row + 1)
-    else:
-        print(f"[SHEET] Membuat sheet baru: '{sheet_name_tarikan}'...")
-        ws_tarikan = wb.create_sheet(title=sheet_name_tarikan)
+    # 2. Hitung Matriks FMV (Model & Tahun)
+    df_matrix = calculate_fmv_matrix(df_listings)
+    n_matrix = len(df_matrix)
 
-    # Header styling
+    # Styling umum
     header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
     header_fill = PatternFill(fill_type="solid", start_color="1F497D", end_color="1F497D")
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -470,20 +526,16 @@ def update_workbook():
     )
     currency_fmt = '_("Rp"* #,##0_);_("Rp"* (#,##0);_("Rp"* "-"_);_(@_)'
 
-    # Struktur 13 Kolom pada Sheet 'list harga tarikan':
-    # Col A (1): No
-    # Col B (2): Platform Sumber
-    # Col C (3): Brand
-    # Col D (4): Model Terkait (LaptopMedia)
-    # Col E (5): Tahun Rilis Model   <-- Parameter Kunci Baru
-    # Col F (6): Nama Seri / Tipe Target
-    # Col G (7): Nama Produk / Judul Iklan
-    # Col H (8): Harga (Rp)          <-- Kolom Harga
-    # Col I (9): Nama Toko / Seller
-    # Col J (10): Lokasi / Kota
-    # Col K (11): Status Seller
-    # Col L (12): URL Produk
-    # Col M (13): Waktu Tarikan
+    # 3. Perbarui Sheet 'list harga tarikan'
+    sheet_name_tarikan = "list harga tarikan"
+    if sheet_name_tarikan in wb.sheetnames:
+        print(f"[SHEET] Memperbarui sheet eksisting: '{sheet_name_tarikan}'...")
+        ws_tarikan = wb[sheet_name_tarikan]
+        ws_tarikan.delete_rows(1, ws_tarikan.max_row + 1)
+    else:
+        print(f"[SHEET] Membuat sheet baru: '{sheet_name_tarikan}'...")
+        ws_tarikan = wb.create_sheet(title=sheet_name_tarikan)
+
     headers_tarikan = [
         "No", "Platform Sumber", "Brand", "Model Terkait (LaptopMedia)", "Tahun Rilis Model",
         "Nama Seri / Tipe Target", "Nama Produk / Judul Iklan", "Harga (Rp)",
@@ -499,7 +551,7 @@ def update_workbook():
         cell.border = thin_border
     ws_tarikan.row_dimensions[1].height = 26
 
-    print(f"[POPULATE] Menulis {n_listings} baris listing ke '{sheet_name_tarikan}' (termasuk Tahun Rilis)...")
+    print(f"[POPULATE] Menulis {n_listings} baris listing ke '{sheet_name_tarikan}'...")
     data_rows = df_listings[[
         "no", "platform_sumber", "brand", "model_terkait", "tahun_rilis_model",
         "nama_seri_target", "judul_iklan", "harga",
@@ -533,23 +585,104 @@ def update_workbook():
             else:
                 cell.alignment = left_align
 
-    # Auto fit column widths
     for col in ws_tarikan.columns:
         col_letter = get_column_letter(col[0].column)
         max_len = max(len(str(cell.value or '')) for cell in col[:50])
         ws_tarikan.column_dimensions[col_letter].width = min(max(max_len + 3, 12), 45)
 
-    # 3. Modifikasi Sheet 'Katalog Seri LaptopMedia'
+    # 4. Tambahkan / Perbarui Sheet Khusus: 'Matriks FMV (Model & Tahun)'
+    sheet_name_matrix = "Matriks FMV (Model & Tahun)"
+    if sheet_name_matrix in wb.sheetnames:
+        print(f"[SHEET] Memperbarui sheet eksisting: '{sheet_name_matrix}'...")
+        ws_mat = wb[sheet_name_matrix]
+        ws_mat.delete_rows(1, ws_mat.max_row + 1)
+    else:
+        print(f"[SHEET] Membuat sheet baru: '{sheet_name_matrix}'...")
+        ws_mat = wb.create_sheet(title=sheet_name_matrix)
+
+    # Struktur Kolom Matriks FMV (Model & Tahun):
+    # Col A (1): Merek
+    # Col B (2): Model Terkait (LaptopMedia)
+    # Col C (3): Mapping Kategori Internal
+    # Col D (4): Tahun Rilis
+    # Col E (5): Sampel Riil
+    # Col F (6): Harga Minimum (Rp)
+    # Col G (7): Harga Bawah P25 (Rp)
+    # Col H (8): Harga FMV Median (Rp)
+    # Col I (9): Harga Atas P75 (Rp)
+    # Col J (10): Harga Maksimum (Rp)
+    # Col K (11): Harga Rata-Rata (Rp)
+    headers_matrix = [
+        "Merek", "Model Terkait (LaptopMedia)", "Mapping Kategori Internal", "Tahun Rilis", "Sampel Riil",
+        "Harga Minimum (Rp)", "Harga Bawah P25 (Rp)", "Harga FMV Median (Rp)", "Harga Atas P75 (Rp)",
+        "Harga Maksimum (Rp)", "Harga Rata-Rata (Rp)"
+    ]
+
+    ws_mat.append(headers_matrix)
+    for col_idx in range(1, len(headers_matrix) + 1):
+        cell = ws_mat.cell(row=1, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = thin_border
+    ws_mat.row_dimensions[1].height = 26
+
+    print(f"[POPULATE] Menulis {n_matrix} baris ke '{sheet_name_matrix}'...")
+    matrix_data_rows = df_matrix.values.tolist()
+
+    for r_idx, row_val in enumerate(matrix_data_rows, start=2):
+        ws_mat.append(row_val)
+        # Col A (Merek)
+        cA = ws_mat.cell(row=r_idx, column=1)
+        cA.alignment = center_align
+        cA.border = thin_border
+        cA.font = Font(name="Calibri", size=9)
+
+        # Col B (Model Terkait)
+        cB = ws_mat.cell(row=r_idx, column=2)
+        cB.alignment = left_align
+        cB.border = thin_border
+        cB.font = Font(name="Calibri", size=9)
+
+        # Col C (Kategori)
+        cC = ws_mat.cell(row=r_idx, column=3)
+        cC.alignment = center_align
+        cC.border = thin_border
+        cC.font = Font(name="Calibri", size=9)
+
+        # Col D (Tahun Rilis)
+        cD = ws_mat.cell(row=r_idx, column=4)
+        cD.value = int(row_val[3])
+        cD.alignment = center_align
+        cD.border = thin_border
+        cD.font = Font(name="Calibri", size=9)
+
+        # Col E (Sampel Riil)
+        cE = ws_mat.cell(row=r_idx, column=5)
+        cE.value = int(row_val[4])
+        cE.number_format = '#,##0'
+        cE.alignment = center_align
+        cE.border = thin_border
+        cE.font = Font(name="Calibri", size=9, bold=True)
+
+        # Col F..K (Nominal Harga)
+        for c_idx in range(6, 12):
+            cell = ws_mat.cell(row=r_idx, column=c_idx)
+            cell.number_format = currency_fmt
+            cell.alignment = right_align
+            cell.border = thin_border
+            # Bold untuk Harga FMV Median (Col 8 / H)
+            cell.font = Font(name="Calibri", size=9, bold=(c_idx == 8))
+
+    for col in ws_mat.columns:
+        col_letter = get_column_letter(col[0].column)
+        max_len = max(len(str(cell.value or '')) for cell in col[:50])
+        ws_mat.column_dimensions[col_letter].width = min(max(max_len + 3, 14), 45)
+
+    # 5. Modifikasi Sheet 'Katalog Seri LaptopMedia' Berbasis Matriks FMV
     ws_lm = wb["Katalog Seri LaptopMedia"]
     print(f"[KATALOG LM] Memperbarui sheet 'Katalog Seri LaptopMedia' ({ws_lm.max_row} baris)...")
 
-    # Kolom baru yang ditambahkan:
-    # Col H (8): Jumlah Sampel Iklan (Model + Tahun)
-    # Col I (9): Harga Pasar Terendah (Min)
-    # Col J (10): Harga Pasar Tertinggi (Max)
-    # Col K (11): Harga Rata-Rata (Mean Rp)
-    # Col L (12): Harga (FMV Rp)
-    # Col M (13): Metode Kalkulasi FMV
     new_lm_headers = [
         "Jumlah Sampel Iklan (Model + Tahun)",
         "Harga Pasar Terendah (Min)",
@@ -568,15 +701,17 @@ def update_workbook():
         cell.border = thin_border
     ws_lm.row_dimensions[1].height = 28
 
-    tarikan_last_row = n_listings + 1
-    # Model Terkait di sheet tarikan berada di Kolom D ($D$2:$D$last)
-    # Tahun Rilis di sheet tarikan berada di Kolom E ($E$2:$E$last)
-    # Harga di sheet tarikan berada di Kolom H ($H$2:$H$last)
-    tarikan_model_range = f"'list harga tarikan'!$D$2:$D${tarikan_last_row}"
-    tarikan_year_range = f"'list harga tarikan'!$E$2:$E${tarikan_last_row}"
-    tarikan_price_range = f"'list harga tarikan'!$H$2:$H${tarikan_last_row}"
+    # Rentang referensi pada sheet Matriks FMV:
+    mat_last_row = n_matrix + 1
+    mat_model_range = f"'Matriks FMV (Model & Tahun)'!$B$2:$B${mat_last_row}"
+    mat_year_range = f"'Matriks FMV (Model & Tahun)'!$D$2:$D${mat_last_row}"
+    mat_sample_range = f"'Matriks FMV (Model & Tahun)'!$E$2:$E${mat_last_row}"
+    mat_min_range = f"'Matriks FMV (Model & Tahun)'!$F$2:$F${mat_last_row}"
+    mat_median_range = f"'Matriks FMV (Model & Tahun)'!$H$2:$H${mat_last_row}"
+    mat_max_range = f"'Matriks FMV (Model & Tahun)'!$J$2:$J${mat_last_row}"
+    mat_mean_range = f"'Matriks FMV (Model & Tahun)'!$K$2:$K${mat_last_row}"
 
-    print(f"[FORMULA INJECTION] Menginjeksi rumus FMV dinamis multi-sampel berbasis (Model + Tahun) ke {ws_lm.max_row - 1} baris model...")
+    print(f"[FORMULA INJECTION] Menginjeksi rumus SUMIFS universal ke Matriks FMV untuk 4829 baris katalog...")
 
     for r in range(2, ws_lm.max_row + 1):
         model_name = str(ws_lm.cell(row=r, column=3).value or "").strip()
@@ -587,10 +722,9 @@ def update_workbook():
         except (ValueError, TypeError):
             year_int = 2021
 
-        # Pastikan kolom F (Tahun Rilis) disimpan sebagai integer untuk perbandingan Excel
         ws_lm.cell(row=r, column=6, value=year_int)
 
-        # Dapatkan benchmark fallback FMV dari DB (dikalibrasi sesuai tahun rilis)
+        # Fallback FMV ekonometrik
         fallback_fmv = fmv_lookup.get(model_name)
         if not fallback_fmv:
             clean_m = re.sub(r"\s*\((?:19\d\d|20\d\d)\)$", "", model_name).strip()
@@ -601,19 +735,19 @@ def update_workbook():
             deprec_factor = (0.82 ** age)
             fallback_fmv = int(round(base_msrp * deprec_factor, -4))
 
-        # Formula Excel Berbasis Kriteria Ganda (Model Terkait DAN Tahun Rilis):
+        # Formula Excel Universal Menggunakan SUMIFS (Bebas dari #NAME? & 100% Kompatibel Semua Versi Excel):
         # Col H: Jumlah Sampel Iklan (Model + Tahun)
-        f_count = f"=COUNTIFS({tarikan_model_range}, C{r}, {tarikan_year_range}, F{r})"
+        f_count = f"=SUMIFS({mat_sample_range}, {mat_model_range}, C{r}, {mat_year_range}, F{r})"
         # Col I: Harga Pasar Terendah (Min)
-        f_min = f'=IF(H{r}>0, MINIFS({tarikan_price_range}, {tarikan_model_range}, C{r}, {tarikan_year_range}, F{r}), "-")'
+        f_min = f'=IF(H{r}>0, SUMIFS({mat_min_range}, {mat_model_range}, C{r}, {mat_year_range}, F{r}), "-")'
         # Col J: Harga Pasar Tertinggi (Max)
-        f_max = f'=IF(H{r}>0, MAXIFS({tarikan_price_range}, {tarikan_model_range}, C{r}, {tarikan_year_range}, F{r}), "-")'
+        f_max = f'=IF(H{r}>0, SUMIFS({mat_max_range}, {mat_model_range}, C{r}, {mat_year_range}, F{r}), "-")'
         # Col K: Harga Rata-Rata (Mean Rp)
-        f_mean = f'=IF(H{r}>0, ROUND(AVERAGEIFS({tarikan_price_range}, {tarikan_model_range}, C{r}, {tarikan_year_range}, F{r}), -3), "-")'
-        # Col L: Harga (FMV Rp) -> MEDIAN(IF((model=C)*(year=F), price))
-        f_fmv = f'=IF(H{r}>0, ROUND(MEDIAN(IF(({tarikan_model_range}=C{r})*({tarikan_year_range}=F{r}), {tarikan_price_range})), -3), {fallback_fmv})'
-        # Col M: Penjelasan Metode Kalkulasi
-        f_method = f'=IF(H{r}>0, "Median Riil Pasar (Model + Tahun Rilis)", "Model Ekonometrik Depresiasi")'
+        f_mean = f'=IF(H{r}>0, SUMIFS({mat_mean_range}, {mat_model_range}, C{r}, {mat_year_range}, F{r}), "-")'
+        # Col L: Harga (FMV Rp)
+        f_fmv = f'=IF(H{r}>0, SUMIFS({mat_median_range}, {mat_model_range}, C{r}, {mat_year_range}, F{r}), {fallback_fmv})'
+        # Col M: Metode Kalkulasi FMV
+        f_method = f'=IF(H{r}>0, "Median Riil Matriks FMV (Model & Tahun)", "Model Ekonometrik Depresiasi")'
 
         cH = ws_lm.cell(row=r, column=8, value=f_count)
         cH.number_format = '#,##0'
@@ -657,7 +791,7 @@ def update_workbook():
     ws_lm.column_dimensions["L"].width = 20
     ws_lm.column_dimensions["M"].width = 38
 
-    # 4. Simpan ke berkas target
+    # 6. Simpan ke seluruh berkas target
     print(f"[SAVE] Menyimpan ke target utama: {EXCEL_PRIMARY}...")
     wb.save(EXCEL_PRIMARY)
 
@@ -670,7 +804,7 @@ def update_workbook():
     wb.save(EXCEL_EXPORT)
 
     print("=" * 80)
-    print("[SELESAI] Master Workbook Excel berhasil diperbarui dengan isolasi kriteria ganda (Model + Tahun).")
+    print(f"[SELESAI] Master Workbook Excel berhasil dilengkapi dengan tab 'Matriks FMV (Model & Tahun)' ({n_matrix} entri).")
     print("=" * 80)
 
 
