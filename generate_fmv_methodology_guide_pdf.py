@@ -212,16 +212,20 @@ def build_fmv_methodology_pdf(output_filepath: str):
     ))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#2563eb"), spaceAfter=10))
 
+    # KARTU METADATA DOKUMEN
+    story.append(Paragraph("<b>KARTU METADATA DOKUMEN:</b>", ParagraphStyle('MetaHdr', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor("#0f172a"), spaceBefore=2, spaceAfter=4)))
+
     meta_table_data = [
-        [Paragraph("Penerbit / Sistem", table_cell_bold), Paragraph("LaptopPrice ID Intelligence Engine (PT Hardware Analytics Indonesia)", table_cell)],
-        [Paragraph("Klasifikasi Dokumen", table_cell_bold), Paragraph("Dokumen Resmi Metodologi Bisnis, Algoritma Ekonometrik & Standar Audit Lapangan", table_cell)],
-        [Paragraph("Versi & Siklus Hardware", table_cell_bold), Paragraph("Versi 2.4 — Rilis November 2026 (Kompatibel Siklus Hardware Laptop 2010 - 2026)", table_cell)],
+        [Paragraph("Penyusun", table_cell_bold), Paragraph("Data Analyst & Riset (Tim Analisis Data & Riset)", table_cell)],
+        [Paragraph("Target Komoditas", table_cell_bold), Paragraph("Laptop & Komputer Portabel Bekas (Pasar Indonesia) / Terintegrasi Arsitektur Valuasi Gawai Multi-Komoditas", table_cell)],
+        [Paragraph("Tanggal Efektif", table_cell_bold), Paragraph("November 2026", table_cell)],
+        [Paragraph("Sistem Inti", table_cell_bold), Paragraph("LaptopPriceID Core Engine v2.4 (Terintegrasi Framework HPpriceID Core Engine v2.0)", table_cell)],
         [Paragraph("Populasi Data Valid", table_cell_bold), Paragraph("2.810 Listing Pasar Terverifikasi, 693 Matriks Model-Tahun, 1.000 Master Katalog Seri", table_cell)],
         [Paragraph("Cakupan Merek Utama", table_cell_bold), Paragraph("10 Brand Utama: ASUS, Lenovo, Acer, Apple, HP, Dell, MSI, Axioo, Huawei, Microsoft", table_cell)],
         [Paragraph("Integritas Data", table_cell_bold), Paragraph("100% Data Riil Terverifikasi Pasar (Nol Data Sintetis / Dummy Data Dilarang Keras)", table_cell)],
-        [Paragraph("Tujuan Metodologi", table_cell_bold), Paragraph("Memberikan rujukan harga objektif bagi transaksi C2C, batas beli aman toko (Buyback Target), dan deteksi diskon arbitrase (Hot Deals).", table_cell)]
+        [Paragraph("Tujuan Metodologi", table_cell_bold), Paragraph("Memberikan rujukan harga objektif bagi transaksi C2C, batas beli aman toko (Buyback Target), penaksiran agunan finansial, dan arbitrase.", table_cell)]
     ]
-    story.append(create_styled_table(meta_table_data, [130, 385], is_header=False, custom_padding=3.5))
+    story.append(create_styled_table(meta_table_data, [130, 385], is_header=False, custom_padding=3.2))
 
     story.append(Spacer(1, 10))
 
@@ -971,16 +975,18 @@ def build_fmv_methodology_pdf(output_filepath: str):
 
     story.append(Spacer(1, 8))
 
-    # LEMBAR PENGESAHAN
+    # LEMBAR PENGESAHAN TATA KELOLA (SIGN-OFF BOX)
+    story.append(Paragraph("<b>Lembar Pengesahan Tata Kelola (Sign-off Box):</b>", ParagraphStyle('SignHdr', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor("#0f172a"), spaceBefore=2, spaceAfter=4, keepWithNext=True)))
+
     sign_table_data = [
-        [Paragraph("Disusun Oleh:", table_cell_bold), Paragraph("Ditinjau & Disetujui Oleh:", table_cell_bold), Paragraph("Status Dokumen:", table_cell_bold)],
+        [Paragraph("Disiapkan Oleh:", table_cell_bold), Paragraph("Diverifikasi Oleh:", table_cell_bold), Paragraph("Disetujui Oleh:", table_cell_bold)],
         [
-            Paragraph("<b>Tim Algoritma & Hardware Intelligence</b><br/>LaptopPrice ID Engineering Team<br/>Jakarta, Indonesia", table_cell),
-            Paragraph("<b>Chief Technology Officer & Lead Auditor</b><br/>PT Hardware Analytics Indonesia<br/>Sertifikasi Penilai Terdaftar", table_cell),
-            Paragraph("<b>STATUS: RESMI (APPROVED)</b><br/>Berlaku untuk Operasional Produksi<br/>Siklus Audit 2026", table_cell_bold)
+            Paragraph("<b>Data Analyst & Riset</b><br/>Tim Analisis Data & Riset<br/>LaptopPrice ID Engine Team", table_cell),
+            Paragraph("<b>Manajer Business Development</b><br/>Divisi Business Development<br/>PT Hardware Analytics Indonesia", table_cell),
+            Paragraph("<b>Chief Risk Officer / Board of Directors</b><br/>Valuation Committee<br/>Status: <b>APPROVED FOR PRODUCTION</b>", table_cell)
         ]
     ]
-    story.append(create_styled_table(sign_table_data, [170, 175, 170], is_header=False, custom_padding=4.5))
+    story.append(create_styled_table(sign_table_data, [170, 175, 170], is_header=False, custom_padding=4.2))
 
     story.append(Spacer(1, 8))
 
