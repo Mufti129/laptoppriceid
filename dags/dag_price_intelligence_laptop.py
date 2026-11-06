@@ -77,8 +77,9 @@ with DAG(
     task_scrape_tokopedia_laptop = BashOperator(
         task_id='scrape_tokopedia_and_update_laptop_fmv',
         bash_command=(
-            f'"{PYTHON_SISTEM}" '
-            f'"/Users/macbookair/.gemini/antigravity/scratch/airflow_workspace/scripts/pipeline_laptop_tokopedia.py"'
+            'python3 '
+            '"/Users/macbookair/Documents/Scrape Data Laptop/scripts/pipeline_laptop_tokopedia.py" '
+            '--condition both'
         ),
     )
 
